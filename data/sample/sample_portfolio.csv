@@ -1,0 +1,18 @@
+account_id,account_name,account_type,tax_status,ticker,shares,cost_basis_per_share,purchase_date,current_price,asset_class,sector
+ACC001,401k,401k,tax_deferred,VTI,500,180.50,2020-03-15,245.30,ETF,Diversified
+ACC001,401k,401k,tax_deferred,BND,300,75.20,2020-06-01,72.80,Bond,Fixed Income
+ACC001,401k,401k,tax_deferred,VXUS,200,55.30,2021-01-10,68.90,ETF,International
+ACC002,Roth IRA,Roth IRA,tax_free,AAPL,50,145.60,2019-08-20,185.92,Stock,Technology
+ACC002,Roth IRA,Roth IRA,tax_free,MSFT,75,210.30,2020-11-05,378.91,Stock,Technology
+ACC002,Roth IRA,Roth IRA,tax_free,GOOGL,30,98.75,2022-01-15,142.65,Stock,Technology
+ACC002,Roth IRA,Roth IRA,tax_free,AMZN,25,125.40,2021-05-10,178.25,Stock,Consumer
+ACC003,Taxable Brokerage,Brokerage,taxable,VOO,100,320.80,2019-12-01,456.78,ETF,Diversified
+ACC003,Taxable Brokerage,Brokerage,taxable,JPM,80,135.20,2020-09-15,168.45,Stock,Financials
+ACC003,Taxable Brokerage,Brokerage,taxable,JNJ,60,148.90,2021-03-20,155.22,Stock,Healthcare
+ACC003,Taxable Brokerage,Brokerage,taxable,PFE,150,38.50,2022-11-10,27.85,Stock,Healthcare
+ACC003,Taxable Brokerage,Brokerage,taxable,XOM,100,58.30,2023-02-05,109.54,Stock,Energy
+ACC004,HSA,HSA,tax_free,VT,50,85.40,2021-07-15,108.76,ETF,Diversified
+ACC004,HSA,HSA,tax_free,BRK.B,20,285.60,2020-04-12,425.30,Stock,Financials
+ACC005,IRA,Traditional IRA,tax_deferred,VYM,200,95.30,2019-06-08,118.45,ETF,Dividends
+ACC005,IRA,Traditional IRA,tax_deferred,VNQ,150,78.90,2020-10-20,85.67,ETF,Real Estate
+ACC005,IRA,Traditional IRA,tax_deferred,GLD,75,168.20,2022-03-15,183.92,ETF,Commodities

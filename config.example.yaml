@@ -1,0 +1,55 @@
+# Configuration template for Investment Portfolio Analyzer
+# Copy this file to config.yaml and customize for your needs
+
+# Tax Information
+tax:
+  federal_bracket: 0.24  # Your federal tax bracket (e.g., 0.24 for 24%)
+  state_bracket: 0.05    # State tax bracket
+  long_term_cap_gains: 0.15  # Long-term capital gains rate
+
+# Portfolio Targets
+allocation:
+  target:
+    stocks: 0.70
+    bonds: 0.20
+    cash: 0.05
+    alternatives: 0.05
+  
+  # Sector allocation limits (% of equity portion)
+  sector_limits:
+    technology: 0.30
+    healthcare: 0.20
+    financials: 0.20
+    consumer: 0.15
+    industrials: 0.10
+    energy: 0.05
+
+# Risk Management
+risk:
+  # Maximum position size as % of total portfolio
+  max_single_position: 0.10
+  
+  # Concentration warning threshold
+  concentration_warning: 0.15
+  
+  # Minimum diversification (number of holdings)
+  min_holdings: 15
+
+# Analysis Settings
+analysis:
+  # Historical period for returns calculation (days)
+  lookback_period: 365
+  
+  # Risk-free rate for Sharpe ratio calculation
+  risk_free_rate: 0.045
+  
+  # Rebalancing threshold (% deviation from target)
+  rebalance_threshold: 0.05
+
+# Data Sources
+data:
+  # Update prices from market data
+  auto_update_prices: true
+  
+  # API configuration (if using market data APIs)
+  # api_key: "your_api_key_here"
