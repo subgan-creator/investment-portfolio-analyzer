@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Analysis Results</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container results-page">
+        <header>
+            <div class="header-content">
+                <h1>Portfolio Analysis</h1>
+                <div class="header-buttons">
+                    <button id="saveSnapshotBtn" class="btn btn-primary">Save Snapshot</button>
+                    <a href="{{ url_for('history') }}" class="btn btn-secondary">View History</a>
+                    <a href="{{ url_for('index') }}" class="btn btn-secondary">New Analysis</a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Save Snapshot Modal -->
+        <div id="saveModal" class="modal hidden">
+            <div class="modal-content">
+                <h3>Save Snapshot</h3>
+                <p>Save this analysis to track your portfolio over time.</p>
+                <input type="text" id="snapshotName" placeholder="Snapshot name (optional)">
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button class="btn btn-primary" onclick="saveSnapshot()">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <main>
+            <!-- Portfolio Summary -->
+            <section class="card summary-card">
+                <h2>Portfolio Summary</h2>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <span class="label">Total Value</span>
+                        <span class="value large">${{ "{:,.2f}".format(data.portfolio.total_value) }}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">Total Cost Basis</span>
+                        <span class="value">${{ "{:,.2f}".format(data.portfolio.total_cost_basis) }}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">Unrealized Gain/Loss</span>
+                        <span class="value {{ 'positive' if data.portfolio.unrealized_gain_loss >= 0 else 'negative' }}">
+                            ${{ "{:,.2f}".format(data.portfolio.unrealized_gain_loss) }}
+                        </span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">Return</span>
+                        <span class="value {{ 'positive' if data.portfolio.return_percent >= 0 else 'negative' }}">
+                            {{ "{:.2f}".format(data.portfolio.return_percent) }}%
+                        </span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">Accounts</span>
+                        <span class="value">{{ data.portfolio.num_accounts }}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">Holdings</span>
+                        <span class="value">{{ data.portfolio.num_holdings }}</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Scores Overview -->
+            <section class="card scores-card">
+                <h2>Analysis Scores</h2>
+                <div class="scores-grid">
+                    <div class="score-item">
+                        <div class="score-circle {{ 'good' if data.diversification.score >= 70 else 'warning' if data.diversification.score >= 40 else 'bad' }}">
+                            <span class="score-value">{{ data.diversification.score }}</span>
+                            <span class="score-max">/100</span>
+                        </div>
+                        <span class="score-label">Diversification</span>
+                        <span class="score-rating">{{ data.diversification.rating }}</span>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-circle {{ 'bad' if data.concentration.risk_level == 'High' else 'warning' if data.concentration.risk_level == 'Moderate' else 'good' }}">
+                            <span class="score-text">{{ data.concentration.risk_level }}</span>
+                        </div>
+                        <span class="score-label">Concentration Risk</span>
+                        <span class="score-rating">Top 10: {{ "{:.1f}".format(data.concentration.top_10_concentration) }}%</span>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-circle {{ 'good' if data.tax.score >= 70 else 'warning' if data.tax.score >= 40 else 'bad' }}">
+                            <span class="score-value">{{ data.tax.score }}</span>
+                            <span class="score-max">/100</span>
+                        </div>
+                        <span class="score-label">Tax Efficiency</span>
+                        <span class="score-rating">{{ data.tax.rating }}</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Source/Brokerage Breakdown -->
+            {% if data.source_breakdown and data.source_breakdown|length > 1 %}
+            <section class="card source-breakdown-card">
+                <h2>Portfolio by Brokerage</h2>
+                <div class="source-breakdown-container">
+                    <div class="source-summary">
+                        {% for source in data.source_breakdown %}
+                        <span class="source-chip source-{{ source.name|lower|replace(' ', '-') }}">
+                            <span class="source-name">{{ source.name }}</span>
+                            <span class="source-value">${{ "{:,.0f}".format(source.value / 1000) }}K</span>
+                        </span>
+                        {% if not loop.last %}<span class="source-divider">|</span>{% endif %}
+                        {% endfor %}
+                    </div>
+                    <div class="source-chart-container">
+                        <div class="source-pie-chart">
+                            <canvas id="sourceChart" width="200" height="200"></canvas>
+                        </div>
+                        <div class="source-legend">
+                            {% for source in data.source_breakdown %}
+                            <div class="legend-item">
+                                <span class="legend-color source-color-{{ loop.index }}"></span>
+                                <span class="legend-name">{{ source.name }}</span>
+                                <span class="legend-percent">{{ "{:.1f}".format(source.percent) }}%</span>
+                                <span class="legend-value">${{ "{:,.2f}".format(source.value) }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </section>
+            {% endif %}
+
+            <!-- Sector Allocation -->
+            {% if data.sector_allocation and data.sector_allocation|length > 0 %}
+            <section class="card sector-breakdown-card">
+                <h2>Sector Allocation</h2>
+                <div class="sector-breakdown-container">
+                    <div class="sector-chart-container">
+                        <div class="sector-pie-chart">
+                            <canvas id="sectorChart" width="250" height="250"></canvas>
+                        </div>
+                        <div class="sector-legend">
+                            {% for sector in data.sector_allocation %}
+                            <div class="sector-legend-item">
+                                <span class="sector-legend-color sector-color-{{ loop.index }}"></span>
+                                <span class="sector-legend-name">{{ sector.name }}</span>
+                                <span class="sector-legend-percent">{{ "{:.1f}".format(sector.percent) }}%</span>
+                                <span class="sector-legend-value">${{ "{:,.0f}".format(sector.value) }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </section>
+            {% endif %}
+
+            <div class="two-column">
+                <!-- Asset Allocation -->
+                <section class="card">
+                    <h2>Asset Allocation</h2>
+                    <div class="allocation-list">
+                        {% for item in data.asset_allocation %}
+                        <div class="allocation-item">
+                            <div class="allocation-header">
+                                <span class="allocation-name">{{ item.name }}</span>
+                                <span class="allocation-percent">{{ "{:.1f}".format(item.percent) }}%</span>
+                            </div>
+                            <div class="allocation-bar-bg">
+                                <div class="allocation-bar" style="width: {{ item.percent }}%"></div>
+                            </div>
+                            <span class="allocation-value">${{ "{:,.2f}".format(item.value) }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <!-- Top Holdings -->
+                <section class="card">
+                    <h2>Top 10 Holdings</h2>
+                    <div class="holdings-table">
+                        <div class="holdings-header">
+                            <span>#</span>
+                            <span>Ticker</span>
+                            <span>Value</span>
+                            <span>% of Portfolio</span>
+                            <span>Gain/Loss</span>
+                        </div>
+                        {% for holding in data.top_holdings %}
+                        <div class="holdings-row">
+                            <span class="rank">{{ holding.rank }}</span>
+                            <span class="ticker-cell">
+                                <a href="{{ holding.url }}" target="_blank" rel="noopener noreferrer" class="ticker-link" title="{{ holding.name }}: {{ holding.description }}">
+                                    <span class="ticker">{{ holding.ticker }}</span>
+                                    <span class="ticker-icon">&#8599;</span>
+                                </a>
+                                <span class="ticker-name">{{ holding.name }}</span>
+                            </span>
+                            <span class="value">${{ "{:,.2f}".format(holding.value) }}</span>
+                            <span class="percent">{{ "{:.1f}".format(holding.percent) }}%</span>
+                            <span class="gain-loss {{ 'positive' if holding.gain_loss >= 0 else 'negative' }}">
+                                ${{ "{:,.2f}".format(holding.gain_loss) }}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </section>
+            </div>
+
+            <!-- Accounts -->
+            <section class="card">
+                <h2>Accounts</h2>
+                <div class="accounts-grid">
+                    {% for account in data.accounts %}
+                    <div class="account-card">
+                        <div class="account-header">
+                            <h3>{{ account.name }}</h3>
+                            <div class="account-badges">
+                                <span class="source-badge source-{{ account.source|lower|replace(' ', '-') }}">{{ account.source }}</span>
+                                <span class="tax-badge {{ account.tax_status }}">{{ account.tax_status.replace('_', ' ').title() }}</span>
+                            </div>
+                        </div>
+                        <div class="account-value">${{ "{:,.2f}".format(account.value) }}</div>
+                        <div class="account-meta">{{ account.num_holdings }} holdings</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <!-- Concentrated Positions Warning -->
+            {% if data.concentration.concentrated_positions %}
+            <section class="card warning-card">
+                <h2>Concentration Warnings</h2>
+                <p class="warning-intro">The following positions exceed recommended concentration limits:</p>
+                <div class="warning-list">
+                    {% for pos in data.concentration.concentrated_positions %}
+                    <div class="warning-item">
+                        <span class="warning-ticker">{{ pos.ticker }}</span>
+                        <span class="warning-percent">{{ "{:.1f}".format(pos.percentage) }}% of portfolio</span>
+                        <span class="warning-level {{ pos.risk_level|lower }}">{{ pos.risk_level }} Risk</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+
+            <!-- Tax-Loss Harvesting -->
+            {% if data.tax.harvesting_opportunities %}
+            <section class="card opportunity-card">
+                <h2>Tax-Loss Harvesting Opportunities</h2>
+                <p class="opportunity-intro">
+                    Potential tax savings: <strong>${{ "{:,.2f}".format(data.tax.potential_savings) }}</strong>
+                </p>
+                <div class="opportunity-list">
+                    {% for opp in data.tax.harvesting_opportunities[:5] %}
+                    <div class="opportunity-item">
+                        <span class="opp-ticker">{{ opp.ticker }}</span>
+                        <span class="opp-loss negative">Loss: ${{ "{:,.2f}".format((opp.unrealized_loss|default(0))|abs) }}</span>
+                        <span class="opp-savings">Save: ${{ "{:,.2f}".format(opp.potential_tax_savings|default(0)) }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+
+            <!-- Recommendations -->
+            {% if data.concentration.recommendations %}
+            <section class="card recommendations-card">
+                <h2>Recommendations</h2>
+                <ul class="recommendations-list">
+                    {% for rec in data.concentration.recommendations %}
+                    <li>{{ rec }}</li>
+                    {% endfor %}
+                </ul>
+            </section>
+            {% endif %}
+
+        </main>
+
+        <footer>
+            <p>Analysis generated on {{ now().strftime('%B %d, %Y at %I:%M %p') if now is defined else 'today' }}</p>
+            <p class="disclaimer">This analysis is for informational purposes only and does not constitute financial advice.</p>
+        </footer>
+    </div>
+    <!-- Chart.js for pie chart -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+        // Source pie chart (only if element exists)
+        const sourceChartCanvas = document.getElementById('sourceChart');
+        if (sourceChartCanvas) {
+            const sourceData = [
+                {% for source in data.source_breakdown %}
+                { name: '{{ source.name }}', value: {{ source.value }}, percent: {{ source.percent }} }{% if not loop.last %},{% endif %}
+                {% endfor %}
+            ];
+
+            const colors = [
+                '#4f46e5', // Indigo
+                '#059669', // Emerald
+                '#d97706', // Amber
+                '#dc2626', // Red
+                '#7c3aed', // Violet
+                '#0891b2', // Cyan
+                '#be185d', // Pink
+                '#65a30d', // Lime
+            ];
+
+            new Chart(sourceChartCanvas, {
+                type: 'doughnut',
+                data: {
+                    labels: sourceData.map(d => d.name),
+                    datasets: [{
+                        data: sourceData.map(d => d.value),
+                        backgroundColor: colors.slice(0, sourceData.length),
+                        borderWidth: 2,
+                        borderColor: '#ffffff',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.raw;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percent = ((value / total) * 100).toFixed(1);
+                                    return `$${value.toLocaleString('en-US', {minimumFractionDigits: 2})} (${percent}%)`;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '50%'
+                }
+            });
+        }
+
+        // Sector pie chart (only if element exists)
+        const sectorChartCanvas = document.getElementById('sectorChart');
+        if (sectorChartCanvas) {
+            const sectorData = [
+                {% for sector in data.sector_allocation %}
+                { name: '{{ sector.name }}', value: {{ sector.value }}, percent: {{ sector.percent }} }{% if not loop.last %},{% endif %}
+                {% endfor %}
+            ];
+
+            // Sector-specific colors
+            const sectorColors = [
+                '#3b82f6', // Blue (Technology)
+                '#10b981', // Emerald (Healthcare)
+                '#8b5cf6', // Violet (Financials)
+                '#f59e0b', // Amber (Consumer Disc)
+                '#ef4444', // Red (Consumer Staples)
+                '#06b6d4', // Cyan (Energy)
+                '#ec4899', // Pink (Industrials)
+                '#84cc16', // Lime (Materials)
+                '#f97316', // Orange (Utilities)
+                '#6366f1', // Indigo (Real Estate)
+                '#14b8a6', // Teal (Comm Services)
+                '#a855f7', // Purple (Fixed Income)
+                '#22c55e', // Green (International)
+                '#64748b', // Slate (Diversified)
+                '#78716c', // Stone (Small/Mid)
+                '#9ca3af', // Gray (Other)
+            ];
+
+            new Chart(sectorChartCanvas, {
+                type: 'doughnut',
+                data: {
+                    labels: sectorData.map(d => d.name),
+                    datasets: [{
+                        data: sectorData.map(d => d.value),
+                        backgroundColor: sectorColors.slice(0, sectorData.length),
+                        borderWidth: 2,
+                        borderColor: '#ffffff',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.raw;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percent = ((value / total) * 100).toFixed(1);
+                                    return `$${value.toLocaleString('en-US', {minimumFractionDigits: 2})} (${percent}%)`;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '50%'
+                }
+            });
+        }
+    </script>
+
+    <style>
+        /* Source Breakdown Styles */
+        .source-breakdown-card {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        }
+
+        .source-breakdown-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .source-summary {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .source-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 500;
+            background: #e0e7ff;
+            color: #3730a3;
+        }
+
+        .source-chip .source-name {
+            font-size: 0.875rem;
+        }
+
+        .source-chip .source-value {
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .source-divider {
+            color: #cbd5e1;
+            font-weight: 300;
+        }
+
+        /* Source-specific colors */
+        .source-betterment { background: #e0f2fe; color: #0369a1; }
+        .source-fidelity { background: #dcfce7; color: #166534; }
+        .source-titan { background: #fef3c7; color: #92400e; }
+        .source-empower { background: #f3e8ff; color: #7c3aed; }
+        .source-acorns { background: #d1fae5; color: #065f46; }
+        .source-arta-finance { background: #fce7f3; color: #9d174d; }
+        .source-schwab { background: #dbeafe; color: #1e40af; }
+        .source-vanguard { background: #fee2e2; color: #991b1b; }
+        .source-other { background: #f1f5f9; color: #475569; }
+
+        .source-chart-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .source-pie-chart {
+            flex-shrink: 0;
+            width: 200px;
+            height: 200px;
+        }
+
+        .source-legend {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .legend-item {
+            display: grid;
+            grid-template-columns: 16px 100px 50px auto;
+            gap: 0.75rem;
+            align-items: center;
+            font-size: 0.875rem;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+
+        .legend-color.source-color-1 { background: #4f46e5; }
+        .legend-color.source-color-2 { background: #059669; }
+        .legend-color.source-color-3 { background: #d97706; }
+        .legend-color.source-color-4 { background: #dc2626; }
+        .legend-color.source-color-5 { background: #7c3aed; }
+        .legend-color.source-color-6 { background: #0891b2; }
+        .legend-color.source-color-7 { background: #be185d; }
+        .legend-color.source-color-8 { background: #65a30d; }
+
+        .legend-name {
+            font-weight: 500;
+            color: #334155;
+        }
+
+        .legend-percent {
+            font-weight: 600;
+            color: #1e293b;
+            text-align: right;
+        }
+
+        .legend-value {
+            color: #64748b;
+            font-size: 0.8125rem;
+        }
+
+        /* Account badges */
+        .account-badges {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .source-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        .source-badge.source-betterment { background: #e0f2fe; color: #0369a1; }
+        .source-badge.source-fidelity { background: #dcfce7; color: #166534; }
+        .source-badge.source-titan { background: #fef3c7; color: #92400e; }
+        .source-badge.source-empower { background: #f3e8ff; color: #7c3aed; }
+        .source-badge.source-acorns { background: #d1fae5; color: #065f46; }
+        .source-badge.source-arta-finance { background: #fce7f3; color: #9d174d; }
+        .source-badge.source-schwab { background: #dbeafe; color: #1e40af; }
+        .source-badge.source-vanguard { background: #fee2e2; color: #991b1b; }
+        .source-badge.source-other { background: #f1f5f9; color: #475569; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .source-chart-container {
+                flex-direction: column;
+            }
+
+            .legend-item {
+                grid-template-columns: 16px 80px 45px auto;
+                gap: 0.5rem;
+            }
+        }
+
+        /* Sector Breakdown Styles */
+        .sector-breakdown-card {
+            background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+        }
+
+        .sector-breakdown-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .sector-chart-container {
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .sector-pie-chart {
+            flex-shrink: 0;
+            width: 250px;
+            height: 250px;
+        }
+
+        .sector-legend {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .sector-legend-item {
+            display: grid;
+            grid-template-columns: 14px 140px 50px auto;
+            gap: 0.5rem;
+            align-items: center;
+            font-size: 0.8125rem;
+            padding: 0.25rem 0;
+        }
+
+        .sector-legend-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+        }
+
+        /* Sector colors matching chart */
+        .sector-legend-color.sector-color-1 { background: #3b82f6; }
+        .sector-legend-color.sector-color-2 { background: #10b981; }
+        .sector-legend-color.sector-color-3 { background: #8b5cf6; }
+        .sector-legend-color.sector-color-4 { background: #f59e0b; }
+        .sector-legend-color.sector-color-5 { background: #ef4444; }
+        .sector-legend-color.sector-color-6 { background: #06b6d4; }
+        .sector-legend-color.sector-color-7 { background: #ec4899; }
+        .sector-legend-color.sector-color-8 { background: #84cc16; }
+        .sector-legend-color.sector-color-9 { background: #f97316; }
+        .sector-legend-color.sector-color-10 { background: #6366f1; }
+        .sector-legend-color.sector-color-11 { background: #14b8a6; }
+        .sector-legend-color.sector-color-12 { background: #a855f7; }
+        .sector-legend-color.sector-color-13 { background: #22c55e; }
+        .sector-legend-color.sector-color-14 { background: #64748b; }
+        .sector-legend-color.sector-color-15 { background: #78716c; }
+        .sector-legend-color.sector-color-16 { background: #9ca3af; }
+
+        .sector-legend-name {
+            font-weight: 500;
+            color: #334155;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .sector-legend-percent {
+            font-weight: 600;
+            color: #1e293b;
+            text-align: right;
+        }
+
+        .sector-legend-value {
+            color: #64748b;
+            font-size: 0.75rem;
+        }
+
+        @media (max-width: 768px) {
+            .sector-chart-container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .sector-legend-item {
+                grid-template-columns: 14px 100px 45px auto;
+            }
+        }
+
+        /* Ticker Info Styles */
+        .ticker-cell {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+        }
+
+        .ticker-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            text-decoration: none;
+            color: #1e40af;
+            font-weight: 600;
+            transition: color 0.2s ease;
+        }
+
+        .ticker-link:hover {
+            color: #3b82f6;
+            text-decoration: underline;
+        }
+
+        .ticker-link .ticker {
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+        }
+
+        .ticker-icon {
+            font-size: 0.75rem;
+            opacity: 0.6;
+        }
+
+        .ticker-link:hover .ticker-icon {
+            opacity: 1;
+        }
+
+        .ticker-name {
+            font-size: 0.7rem;
+            color: #64748b;
+            font-weight: 400;
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Tooltip styling (using title attribute) */
+        .ticker-link[title] {
+            position: relative;
+            cursor: pointer;
+        }
+
+        /* Modal Styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal.hidden {
+            display: none;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 16px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-content h3 {
+            margin: 0 0 0.5rem 0;
+            color: #1e293b;
+        }
+
+        .modal-content p {
+            margin: 0 0 1rem 0;
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        .modal-content input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            box-sizing: border-box;
+        }
+
+        .modal-content input:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+
+        /* Header buttons container */
+        .header-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1d4ed8;
+        }
+
+        /* Adjust holdings table for ticker info */
+        .holdings-row {
+            grid-template-columns: 30px 1fr 100px 80px 100px;
+        }
+
+        .holdings-header {
+            grid-template-columns: 30px 1fr 100px 80px 100px;
+        }
+
+        @media (max-width: 768px) {
+            .ticker-name {
+                max-width: 120px;
+                font-size: 0.65rem;
+            }
+
+            .holdings-row,
+            .holdings-header {
+                grid-template-columns: 25px 1fr 80px 60px 80px;
+            }
+        }
+    </style>
+
+    <script>
+        // Analysis data for saving snapshot
+        const analysisData = {{ data | tojson | safe }};
+
+        document.getElementById('saveSnapshotBtn').addEventListener('click', function() {
+            document.getElementById('saveModal').classList.remove('hidden');
+            document.getElementById('snapshotName').focus();
+        });
+
+        function closeModal() {
+            document.getElementById('saveModal').classList.add('hidden');
+            document.getElementById('snapshotName').value = '';
+        }
+
+        function saveSnapshot() {
+            const name = document.getElementById('snapshotName').value.trim();
+            const btn = document.querySelector('.modal-actions .btn-primary');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+
+            fetch('/snapshot/save', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    analysis_data: analysisData,
+                    name: name || undefined
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    closeModal();
+                    alert('Snapshot saved successfully!');
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to save snapshot'));
+                }
+            })
+            .catch(err => {
+                alert('Error saving snapshot: ' + err.message);
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.textContent = 'Save';
+            });
+        }
+
+        // Close modal on escape key or click outside
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        document.getElementById('saveModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+    </script>
+</body>
+</html>

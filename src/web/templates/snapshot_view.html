@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snapshot: {{ data.name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container results-page">
+        <header>
+            <div class="header-content">
+                <div>
+                    <h1>{{ data.name }}</h1>
+                    <p class="snapshot-date">Saved on {{ data.created_at_formatted }}</p>
+                </div>
+                <div class="header-buttons">
+                    <a href="{{ url_for('history') }}" class="btn btn-secondary">Back to History</a>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <!-- Portfolio Summary -->
+            <section class="card summary-card">
+                <h2>Portfolio Summary</h2>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <span class="label">Total Value</span>
+                        <span class="value large">${{ "{:,.2f}".format(data.portfolio.total_value) }}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">Total Cost Basis</span>
+                        <span class="value">${{ "{:,.2f}".format(data.portfolio.total_cost_basis) }}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">Unrealized Gain/Loss</span>
+                        <span class="value {{ 'positive' if data.portfolio.unrealized_gain_loss >= 0 else 'negative' }}">
+                            ${{ "{:,.2f}".format(data.portfolio.unrealized_gain_loss) }}
+                        </span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">Return</span>
+                        <span class="value {{ 'positive' if data.portfolio.return_percent >= 0 else 'negative' }}">
+                            {{ "{:.2f}".format(data.portfolio.return_percent) }}%
+                        </span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">Accounts</span>
+                        <span class="value">{{ data.portfolio.num_accounts }}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">Holdings</span>
+                        <span class="value">{{ data.portfolio.num_holdings }}</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Scores -->
+            <section class="card scores-card">
+                <h2>Analysis Scores</h2>
+                <div class="scores-grid">
+                    <div class="score-item">
+                        <div class="score-circle {{ 'good' if data.diversification.score and data.diversification.score >= 70 else 'warning' if data.diversification.score and data.diversification.score >= 40 else 'bad' }}">
+                            <span class="score-value">{{ data.diversification.score or '-' }}</span>
+                            <span class="score-max">/100</span>
+                        </div>
+                        <span class="score-label">Diversification</span>
+                        <span class="score-rating">{{ data.diversification.rating or 'N/A' }}</span>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-circle {{ 'bad' if data.concentration.risk_level == 'High' else 'warning' if data.concentration.risk_level == 'Moderate' else 'good' }}">
+                            <span class="score-text">{{ data.concentration.risk_level or 'N/A' }}</span>
+                        </div>
+                        <span class="score-label">Concentration Risk</span>
+                        <span class="score-rating">Top 10: {{ "{:.1f}".format(data.concentration.top_10_concentration or 0) }}%</span>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-circle {{ 'good' if data.tax.score and data.tax.score >= 70 else 'warning' if data.tax.score and data.tax.score >= 40 else 'bad' }}">
+                            <span class="score-value">{{ data.tax.score or '-' }}</span>
+                            <span class="score-max">/100</span>
+                        </div>
+                        <span class="score-label">Tax Efficiency</span>
+                        <span class="score-rating">{{ data.tax.rating or 'N/A' }}</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Top Holdings -->
+            {% if data.top_holdings %}
+            <section class="card">
+                <h2>Top Holdings</h2>
+                <div class="holdings-list">
+                    <div class="holdings-header">
+                        <span>#</span>
+                        <span>Ticker</span>
+                        <span>Value</span>
+                        <span>%</span>
+                        <span>Gain/Loss</span>
+                    </div>
+                    {% for holding in data.top_holdings[:10] %}
+                    <div class="holdings-row">
+                        <span class="rank">{{ holding.rank }}</span>
+                        <span class="ticker">{{ holding.ticker }}</span>
+                        <span class="value">${{ "{:,.0f}".format(holding.value) }}</span>
+                        <span class="percent">{{ "{:.1f}".format(holding.percent) }}%</span>
+                        <span class="gain-loss {{ 'positive' if holding.gain_loss >= 0 else 'negative' }}">
+                            {{ "{:+,.0f}".format(holding.gain_loss) }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+
+            <!-- Asset Allocation -->
+            {% if data.asset_allocation %}
+            <section class="card">
+                <h2>Asset Allocation</h2>
+                <div class="allocation-bars">
+                    {% for alloc in data.asset_allocation %}
+                    <div class="allocation-item">
+                        <div class="allocation-label">
+                            <span>{{ alloc.name }}</span>
+                            <span>${{ "{:,.0f}".format(alloc.value) }}</span>
+                        </div>
+                        <div class="allocation-bar-container">
+                            <div class="allocation-bar" style="width: {{ alloc.percent }}%"></div>
+                            <span class="allocation-percent">{{ "{:.1f}".format(alloc.percent) }}%</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+        </main>
+
+        <footer>
+            <p>Snapshot from {{ data.created_at_formatted }}</p>
+        </footer>
+    </div>
+
+    <style>
+        .snapshot-date {
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-top: 0.25rem;
+        }
+
+        .header-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .holdings-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .holdings-header, .holdings-row {
+            display: grid;
+            grid-template-columns: 30px 1fr 100px 60px 100px;
+            gap: 1rem;
+            padding: 0.75rem;
+            align-items: center;
+        }
+
+        .holdings-header {
+            font-weight: 600;
+            color: #64748b;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+        }
+
+        .holdings-row {
+            background: #f8fafc;
+            border-radius: 8px;
+        }
+
+        .rank {
+            color: #94a3b8;
+            font-weight: 500;
+        }
+
+        .ticker {
+            font-weight: 600;
+        }
+
+        .positive { color: #10b981; }
+        .negative { color: #ef4444; }
+
+        .allocation-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .allocation-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .allocation-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+        }
+
+        .allocation-bar-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .allocation-bar {
+            height: 8px;
+            background: #2563eb;
+            border-radius: 4px;
+            min-width: 4px;
+        }
+
+        .allocation-percent {
+            font-size: 0.8rem;
+            color: #64748b;
+            min-width: 50px;
+        }
+    </style>
+</body>
+</html>

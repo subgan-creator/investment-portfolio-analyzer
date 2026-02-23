@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compare Snapshots</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <h1>Compare Snapshots</h1>
+                <a href="{{ url_for('history') }}" class="btn btn-secondary">Back to History</a>
+            </div>
+        </header>
+
+        <main>
+            <!-- Value Comparison -->
+            <section class="card">
+                <h2>Portfolio Value Change</h2>
+                <div class="comparison-grid">
+                    <div class="compare-item">
+                        <span class="compare-label">{{ snapshot1.name }}</span>
+                        <span class="compare-value">${{ "{:,.2f}".format(snapshot1.portfolio.total_value) }}</span>
+                        <span class="compare-date">{{ snapshot1.created_at_formatted }}</span>
+                    </div>
+                    <div class="compare-arrow">→</div>
+                    <div class="compare-item">
+                        <span class="compare-label">{{ snapshot2.name }}</span>
+                        <span class="compare-value">${{ "{:,.2f}".format(snapshot2.portfolio.total_value) }}</span>
+                        <span class="compare-date">{{ snapshot2.created_at_formatted }}</span>
+                    </div>
+                </div>
+                <div class="change-summary {{ 'positive' if comparison.value_change >= 0 else 'negative' }}">
+                    <span class="change-amount">${{ "{:+,.2f}".format(comparison.value_change) }}</span>
+                    <span class="change-percent">({{ "{:+.2f}".format(comparison.value_change_percent) }}%)</span>
+                </div>
+            </section>
+
+            <!-- Key Metrics Comparison -->
+            <section class="card">
+                <h2>Key Metrics</h2>
+                <div class="metrics-table">
+                    <div class="metric-row header">
+                        <span>Metric</span>
+                        <span>{{ snapshot1.name[:20] }}...</span>
+                        <span>{{ snapshot2.name[:20] }}...</span>
+                        <span>Change</span>
+                    </div>
+                    <div class="metric-row">
+                        <span>Total Value</span>
+                        <span>${{ "{:,.0f}".format(snapshot1.portfolio.total_value) }}</span>
+                        <span>${{ "{:,.0f}".format(snapshot2.portfolio.total_value) }}</span>
+                        <span class="{{ 'positive' if comparison.value_change >= 0 else 'negative' }}">
+                            {{ "{:+,.0f}".format(comparison.value_change) }}
+                        </span>
+                    </div>
+                    <div class="metric-row">
+                        <span>Return %</span>
+                        <span>{{ "{:.1f}".format(snapshot1.portfolio.return_percent) }}%</span>
+                        <span>{{ "{:.1f}".format(snapshot2.portfolio.return_percent) }}%</span>
+                        <span class="{{ 'positive' if comparison.return_change >= 0 else 'negative' }}">
+                            {{ "{:+.1f}".format(comparison.return_change) }}%
+                        </span>
+                    </div>
+                    <div class="metric-row">
+                        <span>Holdings</span>
+                        <span>{{ snapshot1.portfolio.num_holdings }}</span>
+                        <span>{{ snapshot2.portfolio.num_holdings }}</span>
+                        <span>{{ "{:+d}".format(comparison.holdings_change) }}</span>
+                    </div>
+                    <div class="metric-row">
+                        <span>Accounts</span>
+                        <span>{{ snapshot1.portfolio.num_accounts }}</span>
+                        <span>{{ snapshot2.portfolio.num_accounts }}</span>
+                        <span>{{ "{:+d}".format(comparison.accounts_change) }}</span>
+                    </div>
+                    <div class="metric-row">
+                        <span>Diversification</span>
+                        <span>{{ snapshot1.diversification.score or '-' }}/100</span>
+                        <span>{{ snapshot2.diversification.score or '-' }}/100</span>
+                        <span class="{{ 'positive' if comparison.diversification_change >= 0 else 'negative' }}">
+                            {{ "{:+d}".format(comparison.diversification_change) }}
+                        </span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Side by Side Holdings -->
+            <section class="card">
+                <h2>Top Holdings Comparison</h2>
+                <div class="holdings-comparison">
+                    <div class="holdings-column">
+                        <h3>{{ snapshot1.name }}</h3>
+                        {% if snapshot1.top_holdings %}
+                        <div class="holdings-mini-list">
+                            {% for h in snapshot1.top_holdings[:5] %}
+                            <div class="holding-mini">
+                                <span class="ticker">{{ h.ticker }}</span>
+                                <span class="value">${{ "{:,.0f}".format(h.value) }}</span>
+                                <span class="percent">{{ "{:.1f}".format(h.percent) }}%</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="no-data">No holdings data</p>
+                        {% endif %}
+                    </div>
+                    <div class="holdings-column">
+                        <h3>{{ snapshot2.name }}</h3>
+                        {% if snapshot2.top_holdings %}
+                        <div class="holdings-mini-list">
+                            {% for h in snapshot2.top_holdings[:5] %}
+                            <div class="holding-mini">
+                                <span class="ticker">{{ h.ticker }}</span>
+                                <span class="value">${{ "{:,.0f}".format(h.value) }}</span>
+                                <span class="percent">{{ "{:.1f}".format(h.percent) }}%</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="no-data">No holdings data</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>Investment Portfolio Analyzer</p>
+        </footer>
+    </div>
+
+    <style>
+        .comparison-grid {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+            padding: 1.5rem 0;
+        }
+
+        .compare-item {
+            text-align: center;
+        }
+
+        .compare-label {
+            display: block;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
+
+        .compare-value {
+            display: block;
+            font-size: 2rem;
+            font-weight: 700;
+            color: #2563eb;
+        }
+
+        .compare-date {
+            display: block;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-top: 0.25rem;
+        }
+
+        .compare-arrow {
+            font-size: 2rem;
+            color: #94a3b8;
+        }
+
+        .change-summary {
+            text-align: center;
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 12px;
+            margin-top: 1rem;
+        }
+
+        .change-summary.positive {
+            background: #ecfdf5;
+        }
+
+        .change-summary.negative {
+            background: #fef2f2;
+        }
+
+        .change-amount {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .change-percent {
+            font-size: 1rem;
+            margin-left: 0.5rem;
+        }
+
+        .positive { color: #10b981; }
+        .negative { color: #ef4444; }
+
+        .metrics-table {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .metric-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+        }
+
+        .metric-row.header {
+            background: #f1f5f9;
+            font-weight: 600;
+            color: #64748b;
+            font-size: 0.85rem;
+        }
+
+        .metric-row:not(.header) {
+            background: #f8fafc;
+        }
+
+        .metric-row:not(.header):hover {
+            background: #f1f5f9;
+        }
+
+        .holdings-comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .holdings-column h3 {
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            color: #64748b;
+        }
+
+        .holdings-mini-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .holding-mini {
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: 1rem;
+            padding: 0.5rem 0.75rem;
+            background: #f8fafc;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .holding-mini .ticker {
+            font-weight: 600;
+        }
+
+        .holding-mini .percent {
+            color: #64748b;
+        }
+
+        .no-data {
+            color: #94a3b8;
+            font-style: italic;
+        }
+
+        @media (max-width: 768px) {
+            .comparison-grid {
+                flex-direction: column;
+            }
+
+            .compare-arrow {
+                transform: rotate(90deg);
+            }
+
+            .metric-row {
+                grid-template-columns: 1fr 1fr;
+                gap: 0.5rem;
+            }
+
+            .holdings-comparison {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</body>
+</html>

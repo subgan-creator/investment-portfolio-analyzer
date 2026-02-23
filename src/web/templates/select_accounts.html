@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Accounts - Portfolio Analyzer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Select Accounts to Analyze</h1>
+            <p class="subtitle">Choose which accounts to include in your analysis</p>
+        </header>
+
+        <main>
+            <form action="{{ url_for('analyze') }}" method="GET" class="card account-selection-form">
+                <!-- Pass file params as hidden inputs -->
+                {% for file in file_params.split('&') %}
+                    {% set parts = file.split('=') %}
+                    {% if parts|length == 2 %}
+                        <input type="hidden" name="file" value="{{ parts[1] }}">
+                    {% endif %}
+                {% endfor %}
+
+                <div class="selection-header">
+                    <div class="select-all-row">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="select-all" checked>
+                            <span>Select All Accounts</span>
+                        </label>
+                        <span class="total-value">Total: ${{ "{:,.2f}".format(accounts|sum(attribute='value')) }}</span>
+                    </div>
+                </div>
+
+                <div class="accounts-selection-grid">
+                    {% for account in accounts %}
+                    <div class="account-selection-card">
+                        <label class="account-checkbox-label">
+                            <input type="checkbox" name="include_account" value="{{ account.id }}" class="account-checkbox" checked>
+                            <div class="account-info">
+                                <div class="account-header">
+                                    <h3>{{ account.name }}</h3>
+                                    <span class="tax-badge {{ account.tax_status }}">{{ account.tax_status.replace('_', ' ').title() }}</span>
+                                </div>
+                                <div class="account-value">${{ "{:,.2f}".format(account.value) }}</div>
+                                <div class="account-meta">
+                                    <span>{{ account.num_holdings }} holdings</span>
+                                    <span>{{ account.type }}</span>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="form-actions">
+                    <a href="{{ url_for('index') }}" class="btn btn-secondary">Back</a>
+                    <button type="submit" class="btn btn-primary">Analyze Selected Accounts</button>
+                </div>
+            </form>
+        </main>
+    </div>
+
+    <script>
+        // Select all toggle
+        document.getElementById('select-all').addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('.account-checkbox');
+            checkboxes.forEach(cb => cb.checked = this.checked);
+            updateTotal();
+        });
+
+        // Update select-all state when individual checkboxes change
+        document.querySelectorAll('.account-checkbox').forEach(cb => {
+            cb.addEventListener('change', function() {
+                const allCheckboxes = document.querySelectorAll('.account-checkbox');
+                const checkedBoxes = document.querySelectorAll('.account-checkbox:checked');
+                document.getElementById('select-all').checked = allCheckboxes.length === checkedBoxes.length;
+                updateTotal();
+            });
+        });
+
+        function updateTotal() {
+            const accounts = {{ accounts | tojson }};
+            let total = 0;
+            document.querySelectorAll('.account-checkbox:checked').forEach(cb => {
+                const account = accounts.find(a => a.id === cb.value);
+                if (account) total += account.value;
+            });
+            document.querySelector('.total-value').textContent = 'Selected: $' + total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+    </script>
+</body>
+</html>

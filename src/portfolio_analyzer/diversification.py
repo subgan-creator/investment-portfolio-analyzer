@@ -110,8 +110,8 @@ class DiversificationAnalyzer:
             score -= 15
             feedback.append(f"Limited sector diversity ({num_sectors} sectors)")
         
-        score = max(0, score)  # Ensure score doesn't go negative
-        
+        score = max(0, int(round(score)))  # Ensure score doesn't go negative and is an integer
+
         # Determine rating
         if score >= 80:
             rating = "Excellent"

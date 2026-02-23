@@ -44,7 +44,16 @@ config.yaml
 data/*.csv
 data/*.xlsx
 data/*.json
+data/*.pdf
+data/*.db
 !data/sample/
+
+# Uploaded files
+uploads/
+
+# Personal notes
+WARP.md
+Claude_Learning.md
 
 # Jupyter Notebook
 .ipynb_checkpoints

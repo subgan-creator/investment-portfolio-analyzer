@@ -140,8 +140,8 @@ class TaxOptimizer:
                 f"${cap_gains['short_term']['gains']:,.0f} in short-term gains"
             )
         
-        score = max(0, score)
-        
+        score = max(0, int(round(score)))
+
         if score >= 80:
             rating = "Excellent"
         elif score >= 60:

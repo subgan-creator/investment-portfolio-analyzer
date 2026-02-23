@@ -14,6 +14,7 @@ class Holding:
     current_price: float
     asset_class: str = "Unknown"  # 'Stock', 'Bond', 'ETF', 'Mutual Fund', 'Cash', etc.
     sector: str = "Unknown"
+    description: str = ""  # Full fund/security name from source (e.g., "Target Date 2045 Fund")
     
     @property
     def total_cost_basis(self) -> float:

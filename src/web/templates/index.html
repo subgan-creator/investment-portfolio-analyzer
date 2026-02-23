@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Investment Portfolio Analyzer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <div>
+                    <h1>Investment Portfolio Analyzer</h1>
+                    <p class="subtitle">Upload your brokerage statements to get personalized portfolio insights</p>
+                </div>
+                <a href="{{ url_for('history') }}" class="btn btn-secondary">View History</a>
+            </div>
+        </header>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <main>
+            <div class="upload-section">
+                <form action="{{ url_for('upload_files') }}" method="post" enctype="multipart/form-data" id="uploadForm">
+                    <div class="upload-area" id="dropZone">
+                        <div class="upload-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                        </div>
+                        <h2>Drop your files here</h2>
+                        <p>CSV or PDF statements supported</p>
+                        <input type="file" name="files" id="fileInput" multiple accept=".csv,.pdf" />
+                    </div>
+
+                    <div class="file-list" id="fileList"></div>
+
+                    <button type="submit" class="btn btn-primary" id="analyzeBtn" disabled>
+                        Analyze Portfolio
+                    </button>
+                </form>
+            </div>
+
+            <div class="info-section">
+                <h3>Supported Formats</h3>
+                <div class="format-cards">
+                    <div class="format-card">
+                        <h4>Fidelity</h4>
+                        <p>Export from Accounts > Portfolio > Download Positions</p>
+                    </div>
+                    <div class="format-card">
+                        <h4>Standard CSV</h4>
+                        <p>Any CSV with ticker, shares, price, cost basis columns</p>
+                    </div>
+                </div>
+
+                <h3>What You'll Get</h3>
+                <ul class="feature-list">
+                    <li>Portfolio summary with total value and returns</li>
+                    <li>Asset allocation breakdown</li>
+                    <li>Diversification score and analysis</li>
+                    <li>Concentration risk warnings</li>
+                    <li>Tax-loss harvesting opportunities</li>
+                    <li>Actionable recommendations</li>
+                </ul>
+            </div>
+        </main>
+
+        <footer>
+            <p>Your data stays on your computer. We don't store or transmit your financial information.</p>
+        </footer>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+
+        // KEY CONCEPT: We use DataTransfer to accumulate files across multiple selections
+        // This is necessary because HTML file inputs REPLACE files on each selection
+        let accumulatedFiles = new DataTransfer();
+
+        // Click to browse
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        // Drag and drop handlers
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            // Add dropped files to our accumulated collection
+            addFilesToAccumulator(e.dataTransfer.files);
+        });
+
+        // File input change - ADD files instead of replacing
+        fileInput.addEventListener('change', () => {
+            addFilesToAccumulator(fileInput.files);
+        });
+
+        // LEARNING: This function adds new files to our collection without losing previous ones
+        function addFilesToAccumulator(newFiles) {
+            for (let i = 0; i < newFiles.length; i++) {
+                // Check if file already exists (by name) to avoid duplicates
+                let exists = false;
+                for (let j = 0; j < accumulatedFiles.files.length; j++) {
+                    if (accumulatedFiles.files[j].name === newFiles[i].name) {
+                        exists = true;
+                        break;
+                    }
+                }
+                if (!exists) {
+                    accumulatedFiles.items.add(newFiles[i]);
+                }
+            }
+            // Update the actual input element with all accumulated files
+            fileInput.files = accumulatedFiles.files;
+            updateFileList();
+        }
+
+        function updateFileList() {
+            fileList.innerHTML = '';
+            const files = accumulatedFiles.files;
+
+            if (files.length > 0) {
+                analyzeBtn.disabled = false;
+
+                for (let i = 0; i < files.length; i++) {
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'file-item';
+                    // Added a remove button so users can remove individual files
+                    fileItem.innerHTML = `
+                        <span class="file-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                            </svg>
+                        </span>
+                        <span class="file-name">${files[i].name}</span>
+                        <span class="file-size">${formatFileSize(files[i].size)}</span>
+                        <button type="button" class="file-remove" onclick="removeFile(${i})" title="Remove file">×</button>
+                    `;
+                    fileList.appendChild(fileItem);
+                }
+            } else {
+                analyzeBtn.disabled = true;
+            }
+        }
+
+        // LEARNING: To remove a file, we rebuild the DataTransfer without that file
+        // (DataTransfer doesn't have a direct "remove" method)
+        function removeFile(index) {
+            const newDataTransfer = new DataTransfer();
+            for (let i = 0; i < accumulatedFiles.files.length; i++) {
+                if (i !== index) {
+                    newDataTransfer.items.add(accumulatedFiles.files[i]);
+                }
+            }
+            accumulatedFiles = newDataTransfer;
+            fileInput.files = accumulatedFiles.files;
+            updateFileList();
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        // Form submission
+        document.getElementById('uploadForm').addEventListener('submit', function() {
+            analyzeBtn.disabled = true;
+            analyzeBtn.textContent = 'Analyzing...';
+        });
+    </script>
+</body>
+</html>

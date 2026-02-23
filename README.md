@@ -1,6 +1,7 @@
 # Investment Portfolio Analyzer
 
-A comprehensive tool for individual investors to analyze and optimize their investment portfolios across multiple accounts without requiring a financial advisor.
+A comprehensive tool for individual investors to analyze and optimize their investment portfolios across multiple accounts without requiring a financial advisor. 
+Vision is to enable individual investors be informed about their investments, risks, concentration, macro trends and use AI to provide insigths ad guidance so the investor can be well informed. Another aspect is to enable investors to be matched with accrediated investment professional, tax advisor and other financial specialist, the benefit for these professionals is that the client portfolio data is accessible.
 
 ## Features
 
