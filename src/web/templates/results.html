@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portfolio Analysis Results</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
 </head>
 <body>
     <div class="container results-page">
@@ -860,6 +861,14 @@
         document.getElementById('saveModal').addEventListener('click', function(e) {
             if (e.target === this) closeModal();
         });
+    </script>
+
+    <!-- AI Chat Widget -->
+    {% include 'partials/chat_widget.html' %}
+    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+    <script>
+        // Pass portfolio data to chat widget
+        setPortfolioData(analysisData);
     </script>
 </body>
 </html>

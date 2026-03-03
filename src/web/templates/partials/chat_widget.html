@@ -1,0 +1,79 @@
+<!-- AI Chat Widget -->
+<div id="chatWidget">
+    <!-- Floating bubble button -->
+    <div class="chat-bubble" id="chatBubble" title="Ask AI Advisor">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.48 2 2 6.48 2 12c0 1.54.36 3 1 4.31L2 22l5.69-1c1.31.64 2.77 1 4.31 1 5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.29 0-2.52-.3-3.6-.85l-.25-.14-2.6.68.69-2.55-.15-.26A7.95 7.95 0 0 1 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8z"/>
+            <circle cx="8" cy="12" r="1.5"/>
+            <circle cx="12" cy="12" r="1.5"/>
+            <circle cx="16" cy="12" r="1.5"/>
+        </svg>
+    </div>
+
+    <!-- Chat panel -->
+    <div class="chat-panel" id="chatPanel">
+        <!-- Header -->
+        <div class="chat-header">
+            <div class="chat-header-title">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2zM7.5 13a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm9 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM12 9a5 5 0 0 0-5 5v1h10v-1a5 5 0 0 0-5-5z"/>
+                </svg>
+                <div>
+                    <h3>AI Investment Advisor</h3>
+                    <span>Powered by GPT-4o</span>
+                </div>
+            </div>
+            <div class="chat-header-actions">
+                <button class="chat-header-btn" id="clearChatBtn" title="Clear conversation">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                    </svg>
+                </button>
+                <button class="chat-header-btn" id="closeChatBtn" title="Close">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Messages area -->
+        <div class="chat-messages" id="chatMessages">
+            <!-- Welcome message (shown when no messages) -->
+            <div class="chat-welcome" id="chatWelcome">
+                <h4>Hello! I'm your AI Investment Advisor</h4>
+                <p>I can answer questions about your portfolio, explain your holdings, and provide investment insights.</p>
+                <div class="chat-suggestions">
+                    <button class="chat-suggestion" onclick="sendSuggestion('What is my portfolio\'s biggest risk right now?')">
+                        What's my biggest risk?
+                    </button>
+                    <button class="chat-suggestion" onclick="sendSuggestion('How diversified is my portfolio?')">
+                        How diversified am I?
+                    </button>
+                    <button class="chat-suggestion" onclick="sendSuggestion('Any tax-loss harvesting opportunities?')">
+                        Tax-loss harvesting tips?
+                    </button>
+                    <button class="chat-suggestion" onclick="sendSuggestion('Explain my top holdings')">
+                        Explain my top holdings
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input area -->
+        <div class="chat-input-container">
+            <textarea
+                class="chat-input"
+                id="chatInput"
+                placeholder="Ask about your portfolio..."
+                rows="1"
+                maxlength="1000"
+            ></textarea>
+            <button class="chat-send-btn" id="chatSendBtn" title="Send message">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>

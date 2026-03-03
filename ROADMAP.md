@@ -1,6 +1,6 @@
 # Product Roadmap - Investment Portfolio Analyzer
 
-> **Last Updated:** February 8, 2025
+> **Last Updated:** March 1, 2025
 >
 > This document tracks feature ideas, planned enhancements, and the product vision.
 
@@ -22,6 +22,9 @@
 ### In Progress
 *No items currently in progress*
 
+### Just Completed
+- [x] Customize AI Advisor system prompt and add OpenAI API key to .env
+
 ### Completed This Session
 - [x] Multi-file upload (accumulate files instead of replacing)
 - [x] Account selection/exclusion page
@@ -37,6 +40,7 @@
 - [x] Sector Allocation Details (pie chart showing holdings by sector with legend)
 - [x] Ticker Descriptions & Links (full names, descriptions, Yahoo Finance links)
 - [x] Target Date Fund Year Extraction (uses full fund name from PDF to show year, e.g., "Target Date 2045 Fund")
+- [x] AI-Powered Insights (GPT-4o chat widget with portfolio context, persistent history)
 
 ---
 
@@ -44,15 +48,7 @@
 
 ### Medium Priority
 
-#### 4. Historical Tracking
-**Why:** Users want to see portfolio growth over time
-**Effort:** High
-**Details:**
-- Store snapshots of portfolio analysis
-- Show charts: value over time, allocation changes
-- Requires database or file storage
-
-#### 5. Rebalancing Recommendations
+#### 4. Rebalancing Recommendations
 **Why:** Tell users exactly what to buy/sell to reach target allocation
 **Effort:** Medium
 **Details:**
@@ -127,14 +123,6 @@
 - Show volatility metrics
 - Value at Risk (VaR) calculation
 
-#### 14. AI-Powered Insights
-**Why:** Natural language explanations of portfolio health
-**Effort:** Medium
-**Details:**
-- Integrate LLM for personalized insights
-- "Your portfolio is overweight in tech because..."
-- Conversational Q&A about holdings
-
 ---
 
 ## Completed Features
@@ -164,6 +152,8 @@
 - [x] Source badges on accounts (Fidelity, Betterment, Titan, Empower, etc.)
 - [x] Sector Allocation Details (pie chart showing holdings by sector with legend)
 - [x] Ticker Descriptions & Links (full names, descriptions, Yahoo Finance links for 100+ tickers)
+- [x] Historical Tracking (SQLite database, save/view/compare snapshots, Chart.js value chart)
+- [x] AI-Powered Insights (GPT-4o floating chat widget, portfolio context, persistent chat history)
 
 ---
 

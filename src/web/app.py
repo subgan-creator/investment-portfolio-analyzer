@@ -4,13 +4,14 @@ Investment Portfolio Analyzer - Web Application
 """
 import os
 import sys
+import uuid
 from pathlib import Path
 from datetime import datetime
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from werkzeug.utils import secure_filename
 
 from src.utils import load_portfolio_from_csv, load_portfolio_from_multiple_sources, load_config, load_portfolio_from_pdf
@@ -22,6 +23,11 @@ from src.models.snapshot import (
     init_db, save_snapshot, get_all_snapshots, get_snapshot_by_id,
     delete_snapshot, get_snapshots_for_chart, calculate_comparison
 )
+from src.models.chat import (
+    init_chat_db, save_message, get_messages, get_messages_for_api,
+    clear_messages, get_message_count
+)
+from src.services.ai_advisor import AIAdvisor, is_api_configured
 
 app = Flask(__name__,
             template_folder='templates',
@@ -36,8 +42,9 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 ALLOWED_EXTENSIONS = {'csv', 'pdf'}
 
-# Initialize database
+# Initialize databases
 init_db()
+init_chat_db()
 
 # Ticker information database - full names and descriptions
 TICKER_INFO = {
@@ -850,6 +857,108 @@ def compare_snapshots_route():
                            snapshot1=snapshot1.to_dict(),
                            snapshot2=snapshot2.to_dict(),
                            comparison=comparison)
+
+
+# ==================== AI CHAT API ROUTES ====================
+
+@app.route('/api/chat', methods=['GET'])
+def get_chat_history():
+    """Get chat history for the current session."""
+    # Get or create session ID
+    if 'chat_session_id' not in session:
+        session['chat_session_id'] = str(uuid.uuid4())[:8]
+
+    session_id = session['chat_session_id']
+    messages = get_messages(session_id)
+
+    return jsonify({
+        'success': True,
+        'session_id': session_id,
+        'messages': [m.to_dict() for m in messages],
+        'api_configured': is_api_configured()
+    })
+
+
+@app.route('/api/chat', methods=['POST'])
+def send_chat_message():
+    """Send a message and get AI response."""
+    # Get or create session ID
+    if 'chat_session_id' not in session:
+        session['chat_session_id'] = str(uuid.uuid4())[:8]
+
+    session_id = session['chat_session_id']
+
+    data = request.get_json()
+    if not data or 'message' not in data:
+        return jsonify({'success': False, 'error': 'No message provided'}), 400
+
+    user_message = data['message'].strip()
+    if not user_message:
+        return jsonify({'success': False, 'error': 'Empty message'}), 400
+
+    # Get portfolio data from request (passed from frontend)
+    portfolio_data = data.get('portfolio_data', {})
+
+    # Check if API is configured
+    if not is_api_configured():
+        return jsonify({
+            'success': False,
+            'error': 'OpenAI API key not configured. Please add OPENAI_API_KEY to your .env file.'
+        }), 503
+
+    try:
+        # Save user message
+        save_message(session_id, 'user', user_message)
+
+        # Get conversation history
+        conversation = get_messages_for_api(session_id)
+
+        # Get AI response
+        advisor = AIAdvisor(portfolio_data)
+        ai_response = advisor.get_response(conversation)
+
+        # Save AI response
+        save_message(session_id, 'assistant', ai_response)
+
+        return jsonify({
+            'success': True,
+            'response': ai_response,
+            'session_id': session_id
+        })
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Error processing message: {str(e)}'
+        }), 500
+
+
+@app.route('/api/chat', methods=['DELETE'])
+def clear_chat_history():
+    """Clear chat history for the current session."""
+    if 'chat_session_id' not in session:
+        return jsonify({'success': True, 'message': 'No chat history to clear'})
+
+    session_id = session['chat_session_id']
+    count = clear_messages(session_id)
+
+    # Generate new session ID
+    session['chat_session_id'] = str(uuid.uuid4())[:8]
+
+    return jsonify({
+        'success': True,
+        'message': f'Cleared {count} messages',
+        'new_session_id': session['chat_session_id']
+    })
+
+
+@app.route('/api/chat/status')
+def chat_status():
+    """Check if AI chat is available."""
+    return jsonify({
+        'available': is_api_configured(),
+        'message': 'AI advisor is ready' if is_api_configured() else 'Please configure OPENAI_API_KEY in .env file'
+    })
 
 
 if __name__ == '__main__':
