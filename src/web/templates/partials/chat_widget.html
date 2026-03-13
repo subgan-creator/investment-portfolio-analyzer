@@ -42,19 +42,30 @@
             <!-- Welcome message (shown when no messages) -->
             <div class="chat-welcome" id="chatWelcome">
                 <h4>Hello! I'm your AI Investment Advisor</h4>
-                <p>I can answer questions about your portfolio, explain your holdings, and provide investment insights.</p>
+                <p>I can review your portfolio and give you specific, actionable recommendations.</p>
+
+                <!-- Primary CTA: Get Recommendations -->
+                <button class="chat-recommendations-btn" onclick="getSpecificRecommendations()">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+                    </svg>
+                    Get My Portfolio Recommendations
+                </button>
+
+                <p class="chat-welcome-subtitle">Or ask me a specific question:</p>
+
                 <div class="chat-suggestions">
-                    <button class="chat-suggestion" onclick="sendSuggestion('What is my portfolio\'s biggest risk right now?')">
-                        What's my biggest risk?
+                    <button class="chat-suggestion" onclick="sendSuggestion('What should I buy to improve my portfolio diversification?')">
+                        What should I buy?
                     </button>
-                    <button class="chat-suggestion" onclick="sendSuggestion('How diversified is my portfolio?')">
-                        How diversified am I?
+                    <button class="chat-suggestion" onclick="sendSuggestion('Which positions should I reduce due to concentration risk?')">
+                        What should I sell?
                     </button>
-                    <button class="chat-suggestion" onclick="sendSuggestion('Any tax-loss harvesting opportunities?')">
-                        Tax-loss harvesting tips?
+                    <button class="chat-suggestion" onclick="sendSuggestion('Give me specific rebalancing trades with dollar amounts')">
+                        Rebalancing trades
                     </button>
-                    <button class="chat-suggestion" onclick="sendSuggestion('Explain my top holdings')">
-                        Explain my top holdings
+                    <button class="chat-suggestion" onclick="sendSuggestion('What am I missing in my portfolio? What asset classes should I add?')">
+                        What am I missing?
                     </button>
                 </div>
             </div>

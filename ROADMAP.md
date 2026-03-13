@@ -23,6 +23,7 @@
 *No items currently in progress*
 
 ### Just Completed
+- [x] Specific Investment Recommendations (actionable buy/sell with dollar amounts)
 - [x] Customize AI Advisor system prompt and add OpenAI API key to .env
 
 ### Completed This Session
@@ -154,6 +155,7 @@
 - [x] Ticker Descriptions & Links (full names, descriptions, Yahoo Finance links for 100+ tickers)
 - [x] Historical Tracking (SQLite database, save/view/compare snapshots, Chart.js value chart)
 - [x] AI-Powered Insights (GPT-4o floating chat widget, portfolio context, persistent chat history)
+- [x] Specific Investment Recommendations (actionable buy/sell with dollar amounts, rebalancing calculator)
 
 ---
 

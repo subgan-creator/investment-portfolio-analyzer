@@ -11,6 +11,12 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+# Import rebalancing calculator
+try:
+    from src.services.rebalancing import RebalancingCalculator
+except ImportError:
+    from services.rebalancing import RebalancingCalculator
+
 
 class AIAdvisor:
     """AI investment advisor that provides portfolio insights using GPT-4o."""
@@ -152,6 +158,139 @@ ANALYSIS SCORES:
 
         prompt = prompts.get(topic, prompts["overview"])
         return self.get_response([{"role": "user", "content": prompt}])
+
+    def build_recommendations_system_prompt(self) -> str:
+        """Build a directive system prompt for specific recommendations."""
+        base_prompt = """You are a senior investment advisor conducting a portfolio review meeting.
+Your job is to give SPECIFIC, ACTIONABLE recommendations with exact dollar amounts and ticker symbols.
+
+CRITICAL INSTRUCTIONS - YOU MUST FOLLOW THESE:
+1. Give SPECIFIC ticker recommendations (e.g., "Buy $5,000 of VTI" not "consider diversifying")
+2. Include EXACT dollar amounts for each recommendation
+3. Explain WHY each recommendation improves the portfolio
+4. Prioritize recommendations by impact (most important first)
+5. Consider the investor's current holdings - don't recommend what they already own heavily
+6. Use low-cost ETFs when suggesting new positions (Vanguard, Schwab, iShares)
+7. Address concentration risks with specific reduction amounts
+8. Consider tax implications (harvesting, location)
+
+OUTPUT FORMAT - Structure your response like this:
+
+**Portfolio Assessment:**
+[2-3 sentences on overall portfolio health]
+
+**Priority Recommendations:**
+
+1. **[Action] - [Ticker/Fund]** - $[Amount]
+   - Why: [Specific reason based on their portfolio]
+   - Impact: [How this improves diversification/risk/return]
+
+2. **[Action] - [Ticker/Fund]** - $[Amount]
+   - Why: [Specific reason]
+   - Impact: [Expected improvement]
+
+[Continue with 3-5 total recommendations]
+
+**Tax Considerations:**
+[Any tax-loss harvesting or account location suggestions]
+
+**Next Steps:**
+[Specific order of operations to implement these changes]
+
+DISCLAIMER: Remind them this is educational guidance, not personalized financial advice."""
+
+        if not self.portfolio_data:
+            return base_prompt + "\n\nNote: No portfolio data available."
+
+        # Add portfolio context
+        context = self.build_system_prompt().split("PORTFOLIO CONTEXT:")[1] if "PORTFOLIO CONTEXT:" in self.build_system_prompt() else ""
+
+        # Add rebalancing analysis
+        try:
+            calculator = RebalancingCalculator(self.portfolio_data)
+            rebalancing_context = calculator.format_for_ai_context()
+            context += rebalancing_context
+        except Exception:
+            pass  # Continue without rebalancing context if it fails
+
+        return base_prompt + "\n\nPORTFOLIO CONTEXT:" + context
+
+    def get_specific_recommendations(self) -> str:
+        """
+        Get specific, actionable investment recommendations.
+
+        This method uses a more directive prompt that forces GPT to give
+        specific ticker recommendations with dollar amounts.
+
+        Returns:
+            Detailed recommendations string
+        """
+        try:
+            user_message = """Review my portfolio and give me your TOP 5 specific investment recommendations.
+
+For each recommendation, tell me:
+- EXACTLY what to buy or sell (specific ticker symbol)
+- EXACTLY how much in dollars
+- WHY this improves my portfolio
+
+I want actionable advice I can execute today. Be specific with numbers.
+
+Consider:
+1. Any positions I should reduce due to concentration risk
+2. Asset classes or sectors I'm missing
+3. Rebalancing needed to hit target allocation
+4. Tax-loss harvesting opportunities
+5. Low-cost alternatives to high-fee funds
+
+Give me the recommendations like a financial advisor would in a portfolio review meeting."""
+
+            full_messages = [
+                {"role": "system", "content": self.build_recommendations_system_prompt()},
+                {"role": "user", "content": user_message}
+            ]
+
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=full_messages,
+                max_tokens=1500,  # Allow longer response for detailed recommendations
+                temperature=0.5,  # Lower temperature for more consistent recommendations
+            )
+
+            return response.choices[0].message.content
+
+        except Exception as e:
+            error_msg = str(e)
+            if "api_key" in error_msg.lower() or "authentication" in error_msg.lower():
+                return "I'm unable to connect to the AI service. Please check that your OpenAI API key is configured correctly in the .env file."
+            elif "rate_limit" in error_msg.lower():
+                return "I'm receiving too many requests right now. Please try again in a few moments."
+            else:
+                return f"I encountered an error generating recommendations. Please try again. (Error: {error_msg[:100]})"
+
+    def get_rebalancing_plan(self) -> Dict[str, Any]:
+        """
+        Get a structured rebalancing plan.
+
+        Returns:
+            Dict containing rebalancing recommendations and AI commentary
+        """
+        try:
+            calculator = RebalancingCalculator(self.portfolio_data)
+            action_plan = calculator.generate_action_plan()
+
+            # Get AI commentary on the plan
+            ai_summary = self.get_quick_insight("allocation")
+
+            return {
+                'success': True,
+                'action_plan': action_plan,
+                'ai_commentary': ai_summary
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e)
+            }
 
 
 def is_api_configured() -> bool:

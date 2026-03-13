@@ -188,6 +188,55 @@ function sendSuggestion(text) {
     sendMessage();
 }
 
+// Get specific recommendations (primary CTA)
+async function getSpecificRecommendations() {
+    const chatSendBtn = document.getElementById('chatSendBtn');
+
+    // Disable button while processing
+    chatSendBtn.disabled = true;
+
+    // Hide welcome message
+    const welcome = document.getElementById('chatWelcome');
+    welcome.style.display = 'none';
+
+    // Add user message to chat
+    const time = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    appendMessage('user', 'Give me specific investment recommendations for my portfolio', time);
+
+    // Show typing indicator
+    showTyping();
+
+    try {
+        const response = await fetch('/api/recommendations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                portfolio_data: portfolioData
+            })
+        });
+
+        const data = await response.json();
+
+        // Remove typing indicator
+        hideTyping();
+
+        if (data.success) {
+            const responseTime = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+            appendMessage('assistant', data.recommendations, responseTime);
+        } else {
+            showError(data.error || 'Failed to get recommendations');
+        }
+    } catch (error) {
+        hideTyping();
+        showError('Network error. Please try again.');
+        console.error('Error getting recommendations:', error);
+    } finally {
+        chatSendBtn.disabled = false;
+    }
+
+    scrollToBottom();
+}
+
 // Append message to chat
 function appendMessage(role, content, time) {
     const chatMessages = document.getElementById('chatMessages');

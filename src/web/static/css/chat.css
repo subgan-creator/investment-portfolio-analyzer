@@ -185,6 +185,47 @@
     color: #2563eb;
 }
 
+/* Primary CTA: Get Recommendations button */
+.chat-recommendations-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+    color: white;
+    border: none;
+    padding: 14px 20px;
+    border-radius: 10px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 14px rgba(5, 150, 105, 0.35);
+    margin-bottom: 16px;
+}
+
+.chat-recommendations-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(5, 150, 105, 0.45);
+}
+
+.chat-recommendations-btn:active {
+    transform: translateY(0);
+}
+
+.chat-recommendations-btn svg {
+    flex-shrink: 0;
+}
+
+.chat-welcome-subtitle {
+    font-size: 0.8125rem;
+    color: #94a3b8;
+    margin: 0 0 12px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
 /* Message bubbles */
 .chat-message {
     max-width: 85%;

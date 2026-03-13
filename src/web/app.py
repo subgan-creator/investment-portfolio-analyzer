@@ -952,6 +952,43 @@ def clear_chat_history():
     })
 
 
+@app.route('/api/recommendations', methods=['POST'])
+def get_recommendations():
+    """Get specific investment recommendations using enhanced AI prompt."""
+    if not is_api_configured():
+        return jsonify({
+            'success': False,
+            'error': 'AI advisor is not configured. Please add OPENAI_API_KEY to .env file.'
+        }), 400
+
+    try:
+        data = request.get_json() or {}
+        portfolio_data = data.get('portfolio_data', {})
+
+        # Create advisor with portfolio context
+        advisor = AIAdvisor(portfolio_data)
+
+        # Get specific recommendations using the enhanced directive prompt
+        recommendations = advisor.get_specific_recommendations()
+
+        # Save to chat history for context
+        session_id = session.get('chat_session_id')
+        if session_id:
+            save_message(session_id, 'user', 'Give me specific investment recommendations for my portfolio')
+            save_message(session_id, 'assistant', recommendations)
+
+        return jsonify({
+            'success': True,
+            'recommendations': recommendations
+        })
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 @app.route('/api/chat/status')
 def chat_status():
     """Check if AI chat is available."""
