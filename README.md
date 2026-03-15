@@ -14,8 +14,8 @@ Vision is to enable individual investors be informed about their investments, ri
   - Cost basis tracking
 - **Performance Metrics**: Track returns, volatility, and risk-adjusted performance
 - **Visualization Dashboard**: Interactive charts and reports for portfolio insights
-- - 🤖 **AI Investment Advisor**: GPT-4o powered chat widget that analyzes 
-  your portfolio and provides personalized insights and guidance
+- - 🤖 **AI Investment Advisor**: "Claude-sonnet-4-20250514" powered chat widget that analyzes 
+  your portfolio and provides personalized insights and guidance.
 
 
 ## Installation
