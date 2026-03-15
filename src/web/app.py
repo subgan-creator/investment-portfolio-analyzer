@@ -904,7 +904,7 @@ def send_chat_message():
     if not is_api_configured():
         return jsonify({
             'success': False,
-            'error': 'OpenAI API key not configured. Please add OPENAI_API_KEY to your .env file.'
+            'error': 'Anthropic API key not configured. Please add ANTHROPIC_API_KEY to your .env file.'
         }), 503
 
     try:
@@ -959,7 +959,7 @@ def get_recommendations():
     if not is_api_configured():
         return jsonify({
             'success': False,
-            'error': 'AI advisor is not configured. Please add OPENAI_API_KEY to .env file.'
+            'error': 'AI advisor is not configured. Please add ANTHROPIC_API_KEY to .env file.'
         }), 400
 
     try:
@@ -995,7 +995,7 @@ def chat_status():
     """Check if AI chat is available."""
     return jsonify({
         'available': is_api_configured(),
-        'message': 'AI advisor is ready' if is_api_configured() else 'Please configure OPENAI_API_KEY in .env file'
+        'message': 'AI advisor is ready' if is_api_configured() else 'Please configure ANTHROPIC_API_KEY in .env file'
     })
 
 

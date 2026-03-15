@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portfolio Analysis Results</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
 </head>
@@ -11,11 +14,33 @@
     <div class="container results-page">
         <header>
             <div class="header-content">
-                <h1>Portfolio Analysis</h1>
+                <div>
+                    <h1>Portfolio Analysis</h1>
+                    <p class="subtitle">Generated on {{ now().strftime('%B %d, %Y') if now is defined else 'today' }}</p>
+                </div>
                 <div class="header-buttons">
-                    <button id="saveSnapshotBtn" class="btn btn-primary">Save Snapshot</button>
-                    <a href="{{ url_for('history') }}" class="btn btn-secondary">View History</a>
-                    <a href="{{ url_for('index') }}" class="btn btn-secondary">New Analysis</a>
+                    <button id="saveSnapshotBtn" class="btn btn-primary">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                            <polyline points="7 3 7 8 15 8"></polyline>
+                        </svg>
+                        Save Snapshot
+                    </button>
+                    <a href="{{ url_for('history') }}" class="btn btn-secondary">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        History
+                    </a>
+                    <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        New Analysis
+                    </a>
                 </div>
             </div>
         </header>
@@ -38,8 +63,10 @@
             {% if data.portfolio.cost_basis_stats and data.portfolio.cost_basis_stats.has_estimated %}
             <div class="warning-banner">
                 <div class="warning-icon">
-                    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
                     </svg>
                 </div>
                 <div class="warning-content">
@@ -47,92 +74,180 @@
                     <p>
                         {{ data.portfolio.cost_basis_stats.estimated_count }} of {{ data.portfolio.cost_basis_stats.total_holdings }} holdings
                         ({{ "{:.0f}".format(data.portfolio.cost_basis_stats.estimated_percentage) }}% of portfolio value)
-                        have estimated cost basis. Return calculations may be inaccurate for holdings from PDF statements
-                        that don't include cost basis data (Betterment, Titan, Acorns, Empower).
+                        have estimated cost basis. Return calculations may be inaccurate for holdings from PDF statements.
                     </p>
                 </div>
             </div>
             {% endif %}
 
-            <!-- Portfolio Summary -->
-            <section class="card summary-card">
-                <h2>Portfolio Summary</h2>
-                <div class="summary-grid">
-                    <div class="summary-item">
-                        <span class="label">Total Value</span>
-                        <span class="value large">${{ "{:,.2f}".format(data.portfolio.total_value) }}</span>
+            <!-- Dashboard Grid - Key Metrics -->
+            <div class="dashboard-grid">
+                <!-- Portfolio Value Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Portfolio Value</span>
                     </div>
-                    <div class="summary-item">
-                        <span class="label">Total Cost Basis</span>
-                        <span class="value">${{ "{:,.2f}".format(data.portfolio.total_cost_basis) }}</span>
-                    </div>
-                    <div class="summary-item">
-                        <span class="label">Unrealized Gain/Loss</span>
-                        <span class="value {{ 'positive' if data.portfolio.unrealized_gain_loss >= 0 else 'negative' }}">
-                            ${{ "{:,.2f}".format(data.portfolio.unrealized_gain_loss) }}
-                        </span>
-                    </div>
-                    <div class="summary-item">
-                        <span class="label">Return</span>
-                        <span class="value {{ 'positive' if data.portfolio.return_percent >= 0 else 'negative' }}">
-                            {{ "{:.2f}".format(data.portfolio.return_percent) }}%
-                        </span>
-                    </div>
-                    <div class="summary-item">
-                        <span class="label">Accounts</span>
-                        <span class="value">{{ data.portfolio.num_accounts }}</span>
-                    </div>
-                    <div class="summary-item">
-                        <span class="label">Holdings</span>
-                        <span class="value">{{ data.portfolio.num_holdings }}</span>
+                    <div class="card-content">
+                        <div style="font-size: 2rem; font-weight: 700; color: var(--primary);">
+                            ${{ "{:,.2f}".format(data.portfolio.total_value) }}
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; color: {{ 'var(--success)' if data.portfolio.unrealized_gain_loss >= 0 else 'var(--danger)' }};">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                {% if data.portfolio.unrealized_gain_loss >= 0 %}
+                                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                                <polyline points="17 6 23 6 23 12"></polyline>
+                                {% else %}
+                                <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
+                                <polyline points="17 18 23 18 23 12"></polyline>
+                                {% endif %}
+                            </svg>
+                            <span style="font-weight: 600;">
+                                {{ "+" if data.portfolio.unrealized_gain_loss >= 0 else "" }}${{ "{:,.2f}".format(data.portfolio.unrealized_gain_loss) }}
+                                ({{ "{:.2f}".format(data.portfolio.return_percent) }}%)
+                            </span>
+                        </div>
+                        <!-- Mini stats -->
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+                            <div style="text-align: center;">
+                                <div style="font-size: 0.75rem; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.05em;">Cost Basis</div>
+                                <div style="font-size: 1rem; font-weight: 600;">${{ "{:,.0f}".format(data.portfolio.total_cost_basis) }}</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 0.75rem; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.05em;">Accounts</div>
+                                <div style="font-size: 1rem; font-weight: 600;">{{ data.portfolio.num_accounts }}</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 0.75rem; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.05em;">Holdings</div>
+                                <div style="font-size: 1rem; font-weight: 600;">{{ data.portfolio.num_holdings }}</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </section>
 
-            <!-- Scores Overview -->
-            <section class="card scores-card">
-                <h2>Analysis Scores</h2>
-                <div class="scores-grid">
-                    <div class="score-item">
-                        <div class="score-circle {{ 'good' if data.diversification.score >= 70 else 'warning' if data.diversification.score >= 40 else 'bad' }}">
-                            <span class="score-value">{{ data.diversification.score }}</span>
-                            <span class="score-max">/100</span>
-                        </div>
-                        <span class="score-label">Diversification</span>
-                        <span class="score-rating">{{ data.diversification.rating }}</span>
+                <!-- Analysis Scores Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Analysis Scores</span>
                     </div>
-                    <div class="score-item">
-                        <div class="score-circle {{ 'bad' if data.concentration.risk_level == 'High' else 'warning' if data.concentration.risk_level == 'Moderate' else 'good' }}">
-                            <span class="score-text">{{ data.concentration.risk_level }}</span>
+                    <div class="card-content">
+                        <div style="display: flex; justify-content: space-around; gap: 1rem;">
+                            <!-- Diversification Score -->
+                            <div style="text-align: center;">
+                                <div class="score-circle {{ 'good' if data.diversification.score >= 70 else 'warning' if data.diversification.score >= 40 else 'bad' }}" style="width: 70px; height: 70px; margin-bottom: 0.5rem;">
+                                    <span class="score-value" style="font-size: 1.25rem;">{{ data.diversification.score }}</span>
+                                </div>
+                                <div style="font-size: 0.8125rem; font-weight: 500;">Diversification</div>
+                                <div style="font-size: 0.75rem; color: var(--muted-foreground);">{{ data.diversification.rating }}</div>
+                            </div>
+                            <!-- Concentration Risk -->
+                            <div style="text-align: center;">
+                                <div class="score-circle {{ 'bad' if data.concentration.risk_level == 'High' else 'warning' if data.concentration.risk_level == 'Moderate' else 'good' }}" style="width: 70px; height: 70px; margin-bottom: 0.5rem;">
+                                    <span style="font-size: 0.875rem; font-weight: 600;">{{ data.concentration.risk_level[:3] }}</span>
+                                </div>
+                                <div style="font-size: 0.8125rem; font-weight: 500;">Concentration</div>
+                                <div style="font-size: 0.75rem; color: var(--muted-foreground);">Top 10: {{ "{:.0f}".format(data.concentration.top_10_concentration) }}%</div>
+                            </div>
+                            <!-- Tax Score -->
+                            <div style="text-align: center;">
+                                <div class="score-circle {{ 'good' if data.tax.score >= 70 else 'warning' if data.tax.score >= 40 else 'bad' }}" style="width: 70px; height: 70px; margin-bottom: 0.5rem;">
+                                    <span class="score-value" style="font-size: 1.25rem;">{{ data.tax.score }}</span>
+                                </div>
+                                <div style="font-size: 0.8125rem; font-weight: 500;">Tax Efficiency</div>
+                                <div style="font-size: 0.75rem; color: var(--muted-foreground);">{{ data.tax.rating }}</div>
+                            </div>
                         </div>
-                        <span class="score-label">Concentration Risk</span>
-                        <span class="score-rating">Top 10: {{ "{:.1f}".format(data.concentration.top_10_concentration) }}%</span>
                     </div>
-                    <div class="score-item">
-                        <div class="score-circle {{ 'good' if data.tax.score >= 70 else 'warning' if data.tax.score >= 40 else 'bad' }}">
-                            <span class="score-value">{{ data.tax.score }}</span>
-                            <span class="score-max">/100</span>
+                </div>
+            </div>
+
+            <!-- Key Insights Section -->
+            <section class="card">
+                <h2>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: inline; vertical-align: middle; margin-right: 0.5rem;">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                    Key Insights
+                </h2>
+                <div style="padding: 0 1.5rem 1.5rem;">
+                    <!-- Positive Insights -->
+                    {% if data.diversification.score >= 70 %}
+                    <div class="insight-card positive">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="insight-icon" style="color: var(--success);">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                        <div class="insight-content">
+                            <div class="insight-title">Well Diversified Portfolio</div>
+                            <div class="insight-description">Your portfolio has good diversification across {{ data.portfolio.num_holdings }} holdings with a score of {{ data.diversification.score }}/100.</div>
                         </div>
-                        <span class="score-label">Tax Efficiency</span>
-                        <span class="score-rating">{{ data.tax.rating }}</span>
                     </div>
+                    {% endif %}
+
+                    {% if data.portfolio.unrealized_gain_loss > 0 %}
+                    <div class="insight-card positive">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="insight-icon" style="color: var(--success);">
+                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                            <polyline points="17 6 23 6 23 12"></polyline>
+                        </svg>
+                        <div class="insight-content">
+                            <div class="insight-title">Portfolio in Profit</div>
+                            <div class="insight-description">Your investments have gained ${{ "{:,.2f}".format(data.portfolio.unrealized_gain_loss) }} ({{ "{:.2f}".format(data.portfolio.return_percent) }}% return).</div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Warning Insights -->
+                    {% if data.concentration.concentrated_positions %}
+                    <div class="insight-card attention">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="insight-icon" style="color: var(--danger);">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                        <div class="insight-content">
+                            <div class="insight-title">High Concentration Risk</div>
+                            <div class="insight-description">{{ data.concentration.concentrated_positions|length }} position(s) exceed recommended concentration limits. Consider rebalancing.</div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if data.tax.harvesting_opportunities %}
+                    <div class="insight-card warning">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="insight-icon" style="color: var(--warning);">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                        <div class="insight-content">
+                            <div class="insight-title">Tax-Loss Harvesting Available</div>
+                            <div class="insight-description">You could save up to ${{ "{:,.2f}".format(data.tax.potential_savings) }} in taxes by harvesting losses from {{ data.tax.harvesting_opportunities|length }} position(s).</div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if data.diversification.score < 40 %}
+                    <div class="insight-card attention">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="insight-icon" style="color: var(--danger);">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                        <div class="insight-content">
+                            <div class="insight-title">Low Diversification</div>
+                            <div class="insight-description">Your portfolio diversification score is {{ data.diversification.score }}/100. Consider adding more variety to reduce risk.</div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </section>
 
             <!-- Source/Brokerage Breakdown -->
             {% if data.source_breakdown and data.source_breakdown|length > 1 %}
-            <section class="card source-breakdown-card">
+            <section class="card">
                 <h2>Portfolio by Brokerage</h2>
                 <div class="source-breakdown-container">
-                    <div class="source-summary">
-                        {% for source in data.source_breakdown %}
-                        <span class="source-chip source-{{ source.name|lower|replace(' ', '-') }}">
-                            <span class="source-name">{{ source.name }}</span>
-                            <span class="source-value">${{ "{:,.0f}".format(source.value / 1000) }}K</span>
-                        </span>
-                        {% if not loop.last %}<span class="source-divider">|</span>{% endif %}
-                        {% endfor %}
-                    </div>
                     <div class="source-chart-container">
                         <div class="source-pie-chart">
                             <canvas id="sourceChart" width="200" height="200"></canvas>
@@ -143,7 +258,7 @@
                                 <span class="legend-color source-color-{{ loop.index }}"></span>
                                 <span class="legend-name">{{ source.name }}</span>
                                 <span class="legend-percent">{{ "{:.1f}".format(source.percent) }}%</span>
-                                <span class="legend-value">${{ "{:,.2f}".format(source.value) }}</span>
+                                <span class="legend-value">${{ "{:,.0f}".format(source.value) }}</span>
                             </div>
                             {% endfor %}
                         </div>
@@ -154,12 +269,12 @@
 
             <!-- Sector Allocation -->
             {% if data.sector_allocation and data.sector_allocation|length > 0 %}
-            <section class="card sector-breakdown-card">
+            <section class="card">
                 <h2>Sector Allocation</h2>
-                <div class="sector-breakdown-container">
-                    <div class="sector-chart-container">
-                        <div class="sector-pie-chart">
-                            <canvas id="sectorChart" width="250" height="250"></canvas>
+                <div class="source-breakdown-container">
+                    <div class="source-chart-container">
+                        <div class="source-pie-chart" style="width: 220px; height: 220px;">
+                            <canvas id="sectorChart" width="220" height="220"></canvas>
                         </div>
                         <div class="sector-legend">
                             {% for sector in data.sector_allocation %}
@@ -204,7 +319,7 @@
                             <span>#</span>
                             <span>Ticker</span>
                             <span>Value</span>
-                            <span>% of Portfolio</span>
+                            <span>Weight</span>
                             <span>Gain/Loss</span>
                         </div>
                         {% for holding in data.top_holdings %}
@@ -217,10 +332,10 @@
                                 </a>
                                 <span class="ticker-name">{{ holding.name }}</span>
                             </span>
-                            <span class="value">${{ "{:,.2f}".format(holding.value) }}</span>
+                            <span class="value">${{ "{:,.0f}".format(holding.value) }}</span>
                             <span class="percent">{{ "{:.1f}".format(holding.percent) }}%</span>
                             <span class="gain-loss {{ 'positive' if holding.gain_loss >= 0 else 'negative' }}">
-                                ${{ "{:,.2f}".format(holding.gain_loss) }}
+                                {{ "+" if holding.gain_loss >= 0 else "" }}${{ "{:,.0f}".format(holding.gain_loss) }}
                             </span>
                         </div>
                         {% endfor %}
@@ -258,7 +373,7 @@
                     <div class="warning-item">
                         <span class="warning-ticker">{{ pos.ticker }}</span>
                         <span class="warning-percent">{{ "{:.1f}".format(pos.percentage) }}% of portfolio</span>
-                        <span class="warning-level {{ pos.risk_level|lower }}">{{ pos.risk_level }} Risk</span>
+                        <span class="warning-level {{ pos.risk_level|lower }}">{{ pos.risk_level }}</span>
                     </div>
                     {% endfor %}
                 </div>
@@ -270,7 +385,7 @@
             <section class="card opportunity-card">
                 <h2>Tax-Loss Harvesting Opportunities</h2>
                 <p class="opportunity-intro">
-                    Potential tax savings: <strong>${{ "{:,.2f}".format(data.tax.potential_savings) }}</strong>
+                    Potential tax savings: <strong style="color: var(--success);">${{ "{:,.2f}".format(data.tax.potential_savings) }}</strong>
                 </p>
                 <div class="opportunity-list">
                     {% for opp in data.tax.harvesting_opportunities[:5] %}
@@ -286,7 +401,7 @@
 
             <!-- Recommendations -->
             {% if data.concentration.recommendations %}
-            <section class="card recommendations-card">
+            <section class="card">
                 <h2>Recommendations</h2>
                 <ul class="recommendations-list">
                     {% for rec in data.concentration.recommendations %}
@@ -303,27 +418,25 @@
             <p class="disclaimer">This analysis is for informational purposes only and does not constitute financial advice.</p>
         </footer>
     </div>
-    <!-- Chart.js for pie chart -->
+
+    <!-- Chart.js for pie charts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script>
-        // Source pie chart (only if element exists)
+        // Chart colors
+        const chartColors = [
+            '#4f46e5', '#059669', '#d97706', '#dc2626',
+            '#7c3aed', '#0891b2', '#be185d', '#65a30d',
+            '#f97316', '#6366f1', '#14b8a6', '#a855f7',
+            '#22c55e', '#64748b', '#78716c', '#9ca3af'
+        ];
+
+        // Source pie chart
         const sourceChartCanvas = document.getElementById('sourceChart');
         if (sourceChartCanvas) {
             const sourceData = [
                 {% for source in data.source_breakdown %}
-                { name: '{{ source.name }}', value: {{ source.value }}, percent: {{ source.percent }} }{% if not loop.last %},{% endif %}
+                { name: '{{ source.name }}', value: {{ source.value }} }{% if not loop.last %},{% endif %}
                 {% endfor %}
-            ];
-
-            const colors = [
-                '#4f46e5', // Indigo
-                '#059669', // Emerald
-                '#d97706', // Amber
-                '#dc2626', // Red
-                '#7c3aed', // Violet
-                '#0891b2', // Cyan
-                '#be185d', // Pink
-                '#65a30d', // Lime
             ];
 
             new Chart(sourceChartCanvas, {
@@ -332,7 +445,7 @@
                     labels: sourceData.map(d => d.name),
                     datasets: [{
                         data: sourceData.map(d => d.value),
-                        backgroundColor: colors.slice(0, sourceData.length),
+                        backgroundColor: chartColors.slice(0, sourceData.length),
                         borderWidth: 2,
                         borderColor: '#ffffff',
                     }]
@@ -341,52 +454,30 @@
                     responsive: true,
                     maintainAspectRatio: true,
                     plugins: {
-                        legend: {
-                            display: false
-                        },
+                        legend: { display: false },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
                                     const value = context.raw;
                                     const total = context.dataset.data.reduce((a, b) => a + b, 0);
                                     const percent = ((value / total) * 100).toFixed(1);
-                                    return `$${value.toLocaleString('en-US', {minimumFractionDigits: 2})} (${percent}%)`;
+                                    return `$${value.toLocaleString()} (${percent}%)`;
                                 }
                             }
                         }
                     },
-                    cutout: '50%'
+                    cutout: '55%'
                 }
             });
         }
 
-        // Sector pie chart (only if element exists)
+        // Sector pie chart
         const sectorChartCanvas = document.getElementById('sectorChart');
         if (sectorChartCanvas) {
             const sectorData = [
                 {% for sector in data.sector_allocation %}
-                { name: '{{ sector.name }}', value: {{ sector.value }}, percent: {{ sector.percent }} }{% if not loop.last %},{% endif %}
+                { name: '{{ sector.name }}', value: {{ sector.value }} }{% if not loop.last %},{% endif %}
                 {% endfor %}
-            ];
-
-            // Sector-specific colors
-            const sectorColors = [
-                '#3b82f6', // Blue (Technology)
-                '#10b981', // Emerald (Healthcare)
-                '#8b5cf6', // Violet (Financials)
-                '#f59e0b', // Amber (Consumer Disc)
-                '#ef4444', // Red (Consumer Staples)
-                '#06b6d4', // Cyan (Energy)
-                '#ec4899', // Pink (Industrials)
-                '#84cc16', // Lime (Materials)
-                '#f97316', // Orange (Utilities)
-                '#6366f1', // Indigo (Real Estate)
-                '#14b8a6', // Teal (Comm Services)
-                '#a855f7', // Purple (Fixed Income)
-                '#22c55e', // Green (International)
-                '#64748b', // Slate (Diversified)
-                '#78716c', // Stone (Small/Mid)
-                '#9ca3af', // Gray (Other)
             ];
 
             new Chart(sectorChartCanvas, {
@@ -395,7 +486,7 @@
                     labels: sectorData.map(d => d.name),
                     datasets: [{
                         data: sectorData.map(d => d.value),
-                        backgroundColor: sectorColors.slice(0, sectorData.length),
+                        backgroundColor: chartColors.slice(0, sectorData.length),
                         borderWidth: 2,
                         borderColor: '#ffffff',
                     }]
@@ -404,428 +495,23 @@
                     responsive: true,
                     maintainAspectRatio: true,
                     plugins: {
-                        legend: {
-                            display: false
-                        },
+                        legend: { display: false },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
                                     const value = context.raw;
                                     const total = context.dataset.data.reduce((a, b) => a + b, 0);
                                     const percent = ((value / total) * 100).toFixed(1);
-                                    return `$${value.toLocaleString('en-US', {minimumFractionDigits: 2})} (${percent}%)`;
+                                    return `$${value.toLocaleString()} (${percent}%)`;
                                 }
                             }
                         }
                     },
-                    cutout: '50%'
+                    cutout: '55%'
                 }
             });
         }
     </script>
-
-    <style>
-        /* Source Breakdown Styles */
-        .source-breakdown-card {
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        }
-
-        .source-breakdown-container {
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
-
-        .source-summary {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 1rem;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        .source-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-weight: 500;
-            background: #e0e7ff;
-            color: #3730a3;
-        }
-
-        .source-chip .source-name {
-            font-size: 0.875rem;
-        }
-
-        .source-chip .source-value {
-            font-size: 1rem;
-            font-weight: 700;
-        }
-
-        .source-divider {
-            color: #cbd5e1;
-            font-weight: 300;
-        }
-
-        /* Source-specific colors */
-        .source-betterment { background: #e0f2fe; color: #0369a1; }
-        .source-fidelity { background: #dcfce7; color: #166534; }
-        .source-titan { background: #fef3c7; color: #92400e; }
-        .source-empower { background: #f3e8ff; color: #7c3aed; }
-        .source-acorns { background: #d1fae5; color: #065f46; }
-        .source-arta-finance { background: #fce7f3; color: #9d174d; }
-        .source-schwab { background: #dbeafe; color: #1e40af; }
-        .source-vanguard { background: #fee2e2; color: #991b1b; }
-        .source-other { background: #f1f5f9; color: #475569; }
-
-        .source-chart-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 2rem;
-            flex-wrap: wrap;
-        }
-
-        .source-pie-chart {
-            flex-shrink: 0;
-            width: 200px;
-            height: 200px;
-        }
-
-        .source-legend {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .legend-item {
-            display: grid;
-            grid-template-columns: 16px 100px 50px auto;
-            gap: 0.75rem;
-            align-items: center;
-            font-size: 0.875rem;
-        }
-
-        .legend-color {
-            width: 16px;
-            height: 16px;
-            border-radius: 4px;
-        }
-
-        .legend-color.source-color-1 { background: #4f46e5; }
-        .legend-color.source-color-2 { background: #059669; }
-        .legend-color.source-color-3 { background: #d97706; }
-        .legend-color.source-color-4 { background: #dc2626; }
-        .legend-color.source-color-5 { background: #7c3aed; }
-        .legend-color.source-color-6 { background: #0891b2; }
-        .legend-color.source-color-7 { background: #be185d; }
-        .legend-color.source-color-8 { background: #65a30d; }
-
-        .legend-name {
-            font-weight: 500;
-            color: #334155;
-        }
-
-        .legend-percent {
-            font-weight: 600;
-            color: #1e293b;
-            text-align: right;
-        }
-
-        .legend-value {
-            color: #64748b;
-            font-size: 0.8125rem;
-        }
-
-        /* Account badges */
-        .account-badges {
-            display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-        }
-
-        .source-badge {
-            display: inline-block;
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.025em;
-        }
-
-        .source-badge.source-betterment { background: #e0f2fe; color: #0369a1; }
-        .source-badge.source-fidelity { background: #dcfce7; color: #166534; }
-        .source-badge.source-titan { background: #fef3c7; color: #92400e; }
-        .source-badge.source-empower { background: #f3e8ff; color: #7c3aed; }
-        .source-badge.source-acorns { background: #d1fae5; color: #065f46; }
-        .source-badge.source-arta-finance { background: #fce7f3; color: #9d174d; }
-        .source-badge.source-schwab { background: #dbeafe; color: #1e40af; }
-        .source-badge.source-vanguard { background: #fee2e2; color: #991b1b; }
-        .source-badge.source-other { background: #f1f5f9; color: #475569; }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .source-chart-container {
-                flex-direction: column;
-            }
-
-            .legend-item {
-                grid-template-columns: 16px 80px 45px auto;
-                gap: 0.5rem;
-            }
-        }
-
-        /* Sector Breakdown Styles */
-        .sector-breakdown-card {
-            background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
-        }
-
-        .sector-breakdown-container {
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
-
-        .sector-chart-container {
-            display: flex;
-            align-items: flex-start;
-            justify-content: center;
-            gap: 2rem;
-            flex-wrap: wrap;
-        }
-
-        .sector-pie-chart {
-            flex-shrink: 0;
-            width: 250px;
-            height: 250px;
-        }
-
-        .sector-legend {
-            display: flex;
-            flex-direction: column;
-            gap: 0.4rem;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        .sector-legend-item {
-            display: grid;
-            grid-template-columns: 14px 140px 50px auto;
-            gap: 0.5rem;
-            align-items: center;
-            font-size: 0.8125rem;
-            padding: 0.25rem 0;
-        }
-
-        .sector-legend-color {
-            width: 14px;
-            height: 14px;
-            border-radius: 3px;
-        }
-
-        /* Sector colors matching chart */
-        .sector-legend-color.sector-color-1 { background: #3b82f6; }
-        .sector-legend-color.sector-color-2 { background: #10b981; }
-        .sector-legend-color.sector-color-3 { background: #8b5cf6; }
-        .sector-legend-color.sector-color-4 { background: #f59e0b; }
-        .sector-legend-color.sector-color-5 { background: #ef4444; }
-        .sector-legend-color.sector-color-6 { background: #06b6d4; }
-        .sector-legend-color.sector-color-7 { background: #ec4899; }
-        .sector-legend-color.sector-color-8 { background: #84cc16; }
-        .sector-legend-color.sector-color-9 { background: #f97316; }
-        .sector-legend-color.sector-color-10 { background: #6366f1; }
-        .sector-legend-color.sector-color-11 { background: #14b8a6; }
-        .sector-legend-color.sector-color-12 { background: #a855f7; }
-        .sector-legend-color.sector-color-13 { background: #22c55e; }
-        .sector-legend-color.sector-color-14 { background: #64748b; }
-        .sector-legend-color.sector-color-15 { background: #78716c; }
-        .sector-legend-color.sector-color-16 { background: #9ca3af; }
-
-        .sector-legend-name {
-            font-weight: 500;
-            color: #334155;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .sector-legend-percent {
-            font-weight: 600;
-            color: #1e293b;
-            text-align: right;
-        }
-
-        .sector-legend-value {
-            color: #64748b;
-            font-size: 0.75rem;
-        }
-
-        @media (max-width: 768px) {
-            .sector-chart-container {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .sector-legend-item {
-                grid-template-columns: 14px 100px 45px auto;
-            }
-        }
-
-        /* Ticker Info Styles */
-        .ticker-cell {
-            display: flex;
-            flex-direction: column;
-            gap: 0.15rem;
-        }
-
-        .ticker-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-            text-decoration: none;
-            color: #1e40af;
-            font-weight: 600;
-            transition: color 0.2s ease;
-        }
-
-        .ticker-link:hover {
-            color: #3b82f6;
-            text-decoration: underline;
-        }
-
-        .ticker-link .ticker {
-            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
-        }
-
-        .ticker-icon {
-            font-size: 0.75rem;
-            opacity: 0.6;
-        }
-
-        .ticker-link:hover .ticker-icon {
-            opacity: 1;
-        }
-
-        .ticker-name {
-            font-size: 0.7rem;
-            color: #64748b;
-            font-weight: 400;
-            max-width: 180px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        /* Tooltip styling (using title attribute) */
-        .ticker-link[title] {
-            position: relative;
-            cursor: pointer;
-        }
-
-        /* Modal Styles */
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-
-        .modal.hidden {
-            display: none;
-        }
-
-        .modal-content {
-            background: white;
-            padding: 2rem;
-            border-radius: 16px;
-            max-width: 400px;
-            width: 90%;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-        }
-
-        .modal-content h3 {
-            margin: 0 0 0.5rem 0;
-            color: #1e293b;
-        }
-
-        .modal-content p {
-            margin: 0 0 1rem 0;
-            color: #64748b;
-            font-size: 0.9rem;
-        }
-
-        .modal-content input {
-            width: 100%;
-            padding: 0.75rem 1rem;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 1rem;
-            margin-bottom: 1rem;
-            box-sizing: border-box;
-        }
-
-        .modal-content input:focus {
-            outline: none;
-            border-color: #2563eb;
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-        }
-
-        .modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 0.5rem;
-        }
-
-        /* Header buttons container */
-        .header-buttons {
-            display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-        }
-
-        .btn-primary {
-            background: #2563eb;
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: #1d4ed8;
-        }
-
-        /* Adjust holdings table for ticker info */
-        .holdings-row {
-            grid-template-columns: 30px 1fr 100px 80px 100px;
-        }
-
-        .holdings-header {
-            grid-template-columns: 30px 1fr 100px 80px 100px;
-        }
-
-        @media (max-width: 768px) {
-            .ticker-name {
-                max-width: 120px;
-                font-size: 0.65rem;
-            }
-
-            .holdings-row,
-            .holdings-header {
-                grid-template-columns: 25px 1fr 80px 60px 80px;
-            }
-        }
-    </style>
 
     <script>
         // Analysis data for saving snapshot

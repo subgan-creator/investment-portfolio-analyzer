@@ -1,11 +1,11 @@
 """
-AI-Powered Investment Advisor using OpenAI GPT-4o.
+AI-Powered Investment Advisor using Anthropic Claude.
 
 Provides personalized portfolio insights through natural language conversation.
 """
 import os
 from typing import Dict, Any, List, Optional
-from openai import OpenAI
+from anthropic import Anthropic
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -19,7 +19,7 @@ except ImportError:
 
 
 class AIAdvisor:
-    """AI investment advisor that provides portfolio insights using GPT-4o."""
+    """AI investment advisor that provides portfolio insights using Claude."""
 
     def __init__(self, portfolio_data: Optional[Dict[str, Any]] = None):
         """
@@ -28,8 +28,8 @@ class AIAdvisor:
         Args:
             portfolio_data: Dictionary containing portfolio analysis data
         """
-        self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-        self.model = "gpt-4o"
+        self.client = Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
+        self.model = "claude-sonnet-4-20250514"
         self.portfolio_data = portfolio_data or {}
 
     def build_system_prompt(self) -> str:
@@ -115,24 +115,21 @@ ANALYSIS SCORES:
             AI response string
         """
         try:
-            # Build full message list with system prompt
-            full_messages = [
-                {"role": "system", "content": self.build_system_prompt()}
-            ] + messages
-
-            response = self.client.chat.completions.create(
+            # Anthropic API requires system prompt as separate parameter
+            # and messages should only contain user/assistant roles
+            response = self.client.messages.create(
                 model=self.model,
-                messages=full_messages,
-                max_tokens=1000,
-                temperature=0.7,
+                system=self.build_system_prompt(),
+                messages=messages,
+                max_tokens=1024,
             )
 
-            return response.choices[0].message.content
+            return response.content[0].text
 
         except Exception as e:
             error_msg = str(e)
             if "api_key" in error_msg.lower() or "authentication" in error_msg.lower():
-                return "I'm unable to connect to the AI service. Please check that your OpenAI API key is configured correctly in the .env file."
+                return "I'm unable to connect to the AI service. Please check that your Anthropic API key is configured correctly in the .env file."
             elif "rate_limit" in error_msg.lower():
                 return "I'm receiving too many requests right now. Please try again in a few moments."
             else:
@@ -219,7 +216,7 @@ DISCLAIMER: Remind them this is educational guidance, not personalized financial
         """
         Get specific, actionable investment recommendations.
 
-        This method uses a more directive prompt that forces GPT to give
+        This method uses a more directive prompt that forces Claude to give
         specific ticker recommendations with dollar amounts.
 
         Returns:
@@ -244,24 +241,19 @@ Consider:
 
 Give me the recommendations like a financial advisor would in a portfolio review meeting."""
 
-            full_messages = [
-                {"role": "system", "content": self.build_recommendations_system_prompt()},
-                {"role": "user", "content": user_message}
-            ]
-
-            response = self.client.chat.completions.create(
+            response = self.client.messages.create(
                 model=self.model,
-                messages=full_messages,
-                max_tokens=1500,  # Allow longer response for detailed recommendations
-                temperature=0.5,  # Lower temperature for more consistent recommendations
+                system=self.build_recommendations_system_prompt(),
+                messages=[{"role": "user", "content": user_message}],
+                max_tokens=1500,
             )
 
-            return response.choices[0].message.content
+            return response.content[0].text
 
         except Exception as e:
             error_msg = str(e)
             if "api_key" in error_msg.lower() or "authentication" in error_msg.lower():
-                return "I'm unable to connect to the AI service. Please check that your OpenAI API key is configured correctly in the .env file."
+                return "I'm unable to connect to the AI service. Please check that your Anthropic API key is configured correctly in the .env file."
             elif "rate_limit" in error_msg.lower():
                 return "I'm receiving too many requests right now. Please try again in a few moments."
             else:
@@ -294,6 +286,6 @@ Give me the recommendations like a financial advisor would in a portfolio review
 
 
 def is_api_configured() -> bool:
-    """Check if the OpenAI API key is configured."""
-    api_key = os.getenv('OPENAI_API_KEY')
-    return bool(api_key and api_key.strip() and not api_key.startswith('sk-...'))
+    """Check if the Anthropic API key is configured."""
+    api_key = os.getenv('ANTHROPIC_API_KEY')
+    return bool(api_key and api_key.strip() and not api_key.startswith('sk-ant-...'))

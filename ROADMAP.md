@@ -1,6 +1,6 @@
 # Product Roadmap - Investment Portfolio Analyzer
 
-> **Last Updated:** March 1, 2025
+> **Last Updated:** March 15, 2025
 >
 > This document tracks feature ideas, planned enhancements, and the product vision.
 
@@ -23,10 +23,10 @@
 *No items currently in progress*
 
 ### Just Completed
-- [x] Specific Investment Recommendations (actionable buy/sell with dollar amounts)
-- [x] Customize AI Advisor system prompt and add OpenAI API key to .env
+- [x] Modern UI Redesign (CSS design system, dashboard cards, insight cards)
+- [x] Fixed JPMC Empower PDF multi-line fund name parsing
 
-### Completed This Session
+### Completed Previously
 - [x] Multi-file upload (accumulate files instead of replacing)
 - [x] Account selection/exclusion page
 - [x] Fixed diversification score decimals
@@ -63,6 +63,45 @@
 - Automatic: Pull from Yahoo Finance API using ticker symbols
 - Manual: Allow user to input YTD % if they have it from another source
 - Hybrid: Auto-fetch with manual override capability
+
+---
+
+#### Migrate AI Advisor from OpenAI to Anthropic API
+**Why:** Switch from GPT-4o to Claude for the AI Investment Advisor
+**Effort:** Low (2-3 hours)
+**Details:**
+
+**Current Implementation:**
+- `src/services/ai_advisor.py` - AIAdvisor class using OpenAI SDK
+- `src/web/app.py` - Chat endpoints calling AIAdvisor
+- Environment variable: `OPENAI_API_KEY`
+
+**Changes Required:**
+1. Install Anthropic SDK: `pip install anthropic`
+2. Update `ai_advisor.py`:
+   - Replace `from openai import OpenAI` with `from anthropic import Anthropic`
+   - Change client initialization: `Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))`
+   - Update API call from `client.chat.completions.create()` to `client.messages.create()`
+   - Adjust message format (Anthropic uses `system` parameter separately)
+   - Update model from `gpt-4o` to `claude-sonnet-4-20250514` or `claude-3-5-sonnet`
+3. Update `.env` file: Replace `OPENAI_API_KEY` with `ANTHROPIC_API_KEY`
+4. Update `requirements.txt`: Add `anthropic>=0.18.0`
+5. Update error messages referencing "OpenAI"
+
+**API Differences:**
+| OpenAI | Anthropic |
+|--------|-----------|
+| `client.chat.completions.create()` | `client.messages.create()` |
+| `messages=[{role, content}]` | `system="...", messages=[{role, content}]` |
+| `response.choices[0].message.content` | `response.content[0].text` |
+| `max_tokens=1000` | `max_tokens=1024` |
+| `gpt-4o` | `claude-sonnet-4-20250514` |
+
+**Files to Modify:**
+- `src/services/ai_advisor.py` (main changes)
+- `src/models/chat.py` (update docstring only)
+- `requirements.txt`
+- `.env.example`
 
 ---
 
@@ -211,6 +250,15 @@
 - [x] Historical Tracking (SQLite database, save/view/compare snapshots, Chart.js value chart)
 - [x] AI-Powered Insights (GPT-4o floating chat widget, portfolio context, persistent chat history)
 - [x] Specific Investment Recommendations (actionable buy/sell with dollar amounts, rebalancing calculator)
+
+### v1.2 - UI Redesign (March 2025)
+- [x] Modern CSS Design System (CSS variables, Inter font, design tokens)
+- [x] Upload Page Redesign (hero section, drag & drop zone, brokerage cards)
+- [x] Results Page Dashboard (portfolio value card, analysis scores card)
+- [x] Key Insights Section (colored insight cards: positive/warning/attention)
+- [x] Improved Charts (doughnut charts for brokerage & sector allocation)
+- [x] Fixed JPMC Empower multi-line fund name parsing
+- [x] Added DEFECTS.md for bug tracking
 
 ---
 

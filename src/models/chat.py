@@ -77,7 +77,7 @@ def get_messages(session_id: str, limit: int = 50) -> List[ChatMessage]:
 
 
 def get_messages_for_api(session_id: str, limit: int = 20) -> List[Dict[str, str]]:
-    """Get messages formatted for OpenAI API (role + content only)."""
+    """Get messages formatted for Anthropic API (role + content only)."""
     messages = get_messages(session_id, limit)
     return [{"role": m.role, "content": m.content} for m in messages]
 

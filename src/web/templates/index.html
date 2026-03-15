@@ -4,19 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Investment Portfolio Analyzer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
     <div class="container">
-        <header>
-            <div class="header-content">
-                <div>
-                    <h1>Investment Portfolio Analyzer</h1>
-                    <p class="subtitle">Upload your brokerage statements to get personalized portfolio insights</p>
-                </div>
-                <a href="{{ url_for('history') }}" class="btn btn-secondary">View History</a>
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <h1>Investment Portfolio Analyzer</h1>
+            <p>Upload your brokerage statements to get personalized portfolio insights, allocation analysis, and actionable recommendations.</p>
+            <div class="privacy-badge">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                <span>Your data stays on your computer. We don't store or transmit your financial information.</span>
             </div>
-        </header>
+        </section>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -27,56 +33,89 @@
         {% endwith %}
 
         <main>
+            <!-- Upload Section -->
             <div class="upload-section">
                 <form action="{{ url_for('upload_files') }}" method="post" enctype="multipart/form-data" id="uploadForm">
                     <div class="upload-area" id="dropZone">
                         <div class="upload-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                                 <polyline points="17 8 12 3 7 8"></polyline>
                                 <line x1="12" y1="3" x2="12" y2="15"></line>
                             </svg>
                         </div>
-                        <h2>Drop your files here</h2>
-                        <p>CSV or PDF statements supported</p>
+                        <h2>Drag & drop your statements here</h2>
+                        <p>or click to browse files</p>
+                        <p style="margin-top: 0.5rem; font-size: 0.8125rem;">Supported formats: PDF, CSV</p>
                         <input type="file" name="files" id="fileInput" multiple accept=".csv,.pdf" />
                     </div>
 
                     <div class="file-list" id="fileList"></div>
 
-                    <button type="submit" class="btn btn-primary" id="analyzeBtn" disabled>
+                    <button type="submit" class="btn btn-primary btn-lg" id="analyzeBtn" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                        </svg>
                         Analyze Portfolio
                     </button>
                 </form>
             </div>
 
+            <!-- Info Section -->
             <div class="info-section">
-                <h3>Supported Formats</h3>
+                <h3>Supported Brokerages</h3>
                 <div class="format-cards">
                     <div class="format-card">
                         <h4>Fidelity</h4>
-                        <p>Export from Accounts > Portfolio > Download Positions</p>
+                        <p>Export from Accounts &rarr; Portfolio &rarr; Download Positions</p>
+                    </div>
+                    <div class="format-card">
+                        <h4>Empower</h4>
+                        <p>Download quarterly statements (JPMC, Wells Fargo)</p>
+                    </div>
+                    <div class="format-card">
+                        <h4>Betterment</h4>
+                        <p>Download monthly/quarterly statements</p>
+                    </div>
+                    <div class="format-card">
+                        <h4>Titan</h4>
+                        <p>Download account statements</p>
+                    </div>
+                    <div class="format-card">
+                        <h4>Acorns</h4>
+                        <p>Download monthly statements</p>
                     </div>
                     <div class="format-card">
                         <h4>Standard CSV</h4>
-                        <p>Any CSV with ticker, shares, price, cost basis columns</p>
+                        <p>Any CSV with ticker, shares, price columns</p>
                     </div>
                 </div>
 
                 <h3>What You'll Get</h3>
                 <ul class="feature-list">
                     <li>Portfolio summary with total value and returns</li>
-                    <li>Asset allocation breakdown</li>
+                    <li>Asset allocation breakdown with charts</li>
                     <li>Diversification score and analysis</li>
                     <li>Concentration risk warnings</li>
                     <li>Tax-loss harvesting opportunities</li>
-                    <li>Actionable recommendations</li>
+                    <li>Actionable investment recommendations</li>
                 </ul>
+            </div>
+
+            <!-- History Link -->
+            <div style="text-align: center; margin-top: 1.5rem;">
+                <a href="{{ url_for('history') }}" class="btn btn-secondary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    View Analysis History
+                </a>
             </div>
         </main>
 
         <footer>
-            <p>Your data stays on your computer. We don't store or transmit your financial information.</p>
+            <p>Your data stays private and secure on your local machine.</p>
         </footer>
     </div>
 
@@ -86,8 +125,7 @@
         const fileList = document.getElementById('fileList');
         const analyzeBtn = document.getElementById('analyzeBtn');
 
-        // KEY CONCEPT: We use DataTransfer to accumulate files across multiple selections
-        // This is necessary because HTML file inputs REPLACE files on each selection
+        // Use DataTransfer to accumulate files across multiple selections
         let accumulatedFiles = new DataTransfer();
 
         // Click to browse
@@ -106,19 +144,17 @@
         dropZone.addEventListener('drop', (e) => {
             e.preventDefault();
             dropZone.classList.remove('dragover');
-            // Add dropped files to our accumulated collection
             addFilesToAccumulator(e.dataTransfer.files);
         });
 
-        // File input change - ADD files instead of replacing
+        // File input change
         fileInput.addEventListener('change', () => {
             addFilesToAccumulator(fileInput.files);
         });
 
-        // LEARNING: This function adds new files to our collection without losing previous ones
         function addFilesToAccumulator(newFiles) {
             for (let i = 0; i < newFiles.length; i++) {
-                // Check if file already exists (by name) to avoid duplicates
+                // Check for duplicates
                 let exists = false;
                 for (let j = 0; j < accumulatedFiles.files.length; j++) {
                     if (accumulatedFiles.files[j].name === newFiles[i].name) {
@@ -130,7 +166,6 @@
                     accumulatedFiles.items.add(newFiles[i]);
                 }
             }
-            // Update the actual input element with all accumulated files
             fileInput.files = accumulatedFiles.files;
             updateFileList();
         }
@@ -145,7 +180,6 @@
                 for (let i = 0; i < files.length; i++) {
                     const fileItem = document.createElement('div');
                     fileItem.className = 'file-item';
-                    // Added a remove button so users can remove individual files
                     fileItem.innerHTML = `
                         <span class="file-icon">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -155,7 +189,7 @@
                         </span>
                         <span class="file-name">${files[i].name}</span>
                         <span class="file-size">${formatFileSize(files[i].size)}</span>
-                        <button type="button" class="file-remove" onclick="removeFile(${i})" title="Remove file">×</button>
+                        <button type="button" class="file-remove" onclick="removeFile(${i})" title="Remove file">&times;</button>
                     `;
                     fileList.appendChild(fileItem);
                 }
@@ -164,8 +198,6 @@
             }
         }
 
-        // LEARNING: To remove a file, we rebuild the DataTransfer without that file
-        // (DataTransfer doesn't have a direct "remove" method)
         function removeFile(index) {
             const newDataTransfer = new DataTransfer();
             for (let i = 0; i < accumulatedFiles.files.length; i++) {
@@ -187,8 +219,30 @@
         // Form submission
         document.getElementById('uploadForm').addEventListener('submit', function() {
             analyzeBtn.disabled = true;
-            analyzeBtn.textContent = 'Analyzing...';
+            analyzeBtn.innerHTML = `
+                <svg class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="2" x2="12" y2="6"></line>
+                    <line x1="12" y1="18" x2="12" y2="22"></line>
+                    <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
+                    <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line>
+                    <line x1="2" y1="12" x2="6" y2="12"></line>
+                    <line x1="18" y1="12" x2="22" y2="12"></line>
+                    <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line>
+                    <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line>
+                </svg>
+                Analyzing...
+            `;
         });
     </script>
+
+    <style>
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+    </style>
 </body>
 </html>
