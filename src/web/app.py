@@ -459,6 +459,7 @@ def analyze():
                 'return_percent': ((portfolio.total_value - portfolio.total_cost_basis) / portfolio.total_cost_basis * 100) if portfolio.total_cost_basis > 0 else 0,
                 'num_accounts': len(portfolio.accounts),
                 'num_holdings': len(portfolio.get_all_holdings()),
+                'cost_basis_stats': portfolio.get_cost_basis_stats(),
             },
             'accounts': [],
             'asset_allocation': [],

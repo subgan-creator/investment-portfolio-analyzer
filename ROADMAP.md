@@ -47,6 +47,42 @@
 
 ## Backlog
 
+**Why:** Tax analyzer for investment accounts  
+**Effort:** Medium
+**Details:**
+- Need to understand the income, interest and dividends from investment account statement
+- Once the user uploads the year end statement document i need to extract the required details
+- The primary persona is a Retail investor
+
+**Why:** Make the UI more intuitive and user friendly 
+**Effort:** Medium
+**Details:**
+- Levearge V0 designs for the approach
+- Leverage Claude to implement the design patterns
+- The primary persona is a Retail investor
+
+**Why:** Alerting about fees on accounts
+**Effort:** Medium
+**Details:**
+- Scan through statements
+- Identify periodic fees and then summarize to the user
+- Understand if the fee is monthly or annually
+
+**Why:** Tax loss harvesting alerts
+**Effort:** Medium
+**Details:**
+- Identify tax loss harvesting items in statements
+- Let the users know about potential opportunities
+- Provide them a clear explanation  of the opportunity
+
+**Why:** Investment ideas recommendor
+**Effort:** Medium
+**Details:**
+- Let the user use the AI chatbot for specific ideas and thematic recommendation
+- We should provide a specific thematic recommendations in the chat bot
+- Once the user selects an option we should give them the opportunity to review and save the idea
+
+
 ### Medium Priority
 
 #### 4. Rebalancing Recommendations

@@ -15,16 +15,18 @@ class PortfolioAnalyzer:
     
     def get_portfolio_summary(self) -> Dict[str, Any]:
         """Generate a comprehensive portfolio summary"""
+        cost_basis_stats = self.portfolio.get_cost_basis_stats()
         return {
             'total_value': self.portfolio.total_value,
             'total_cost_basis': self.portfolio.total_cost_basis,
             'total_unrealized_gain_loss': self.portfolio.total_unrealized_gain_loss,
-            'return_percentage': (self.portfolio.total_unrealized_gain_loss / 
-                                 self.portfolio.total_cost_basis * 100) 
+            'return_percentage': (self.portfolio.total_unrealized_gain_loss /
+                                 self.portfolio.total_cost_basis * 100)
                                  if self.portfolio.total_cost_basis > 0 else 0,
             'num_accounts': len(self.portfolio.accounts),
             'num_positions': len(self.portfolio.get_consolidated_positions()),
             'num_holdings': len(self.portfolio.get_all_holdings()),
+            'cost_basis_stats': cost_basis_stats,
         }
     
     def analyze_diversification(self) -> Dict[str, Any]:

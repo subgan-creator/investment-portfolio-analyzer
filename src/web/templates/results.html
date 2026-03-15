@@ -34,6 +34,26 @@
         </div>
 
         <main>
+            <!-- Cost Basis Warning Banner -->
+            {% if data.portfolio.cost_basis_stats and data.portfolio.cost_basis_stats.has_estimated %}
+            <div class="warning-banner">
+                <div class="warning-icon">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                    </svg>
+                </div>
+                <div class="warning-content">
+                    <strong>Cost Basis Data Incomplete</strong>
+                    <p>
+                        {{ data.portfolio.cost_basis_stats.estimated_count }} of {{ data.portfolio.cost_basis_stats.total_holdings }} holdings
+                        ({{ "{:.0f}".format(data.portfolio.cost_basis_stats.estimated_percentage) }}% of portfolio value)
+                        have estimated cost basis. Return calculations may be inaccurate for holdings from PDF statements
+                        that don't include cost basis data (Betterment, Titan, Acorns, Empower).
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Portfolio Summary -->
             <section class="card summary-card">
                 <h2>Portfolio Summary</h2>

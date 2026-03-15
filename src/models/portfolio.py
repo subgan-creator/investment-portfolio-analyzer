@@ -85,18 +85,39 @@ class Portfolio:
     def get_sector_allocation(self) -> Dict[str, float]:
         """Get sector allocation breakdown"""
         allocation = defaultdict(float)
-        
+
         for holding in self.get_all_holdings():
             if holding.asset_class.lower() in ['stock', 'etf']:
                 allocation[holding.sector] += holding.market_value
-        
+
         total_equity = sum(allocation.values())
-        
+
         # Convert to percentages of equity portion
         if total_equity > 0:
-            return {sector: (value / total_equity * 100) 
+            return {sector: (value / total_equity * 100)
                     for sector, value in allocation.items()}
         return {}
+
+    def get_cost_basis_stats(self) -> Dict[str, any]:
+        """Get statistics about cost basis data availability"""
+        all_holdings = self.get_all_holdings()
+        total_holdings = len(all_holdings)
+        estimated_count = sum(1 for h in all_holdings if h.cost_basis_estimated)
+        actual_count = total_holdings - estimated_count
+
+        # Calculate value with estimated vs actual cost basis
+        estimated_value = sum(h.market_value for h in all_holdings if h.cost_basis_estimated)
+        actual_value = sum(h.market_value for h in all_holdings if not h.cost_basis_estimated)
+
+        return {
+            'total_holdings': total_holdings,
+            'estimated_count': estimated_count,
+            'actual_count': actual_count,
+            'estimated_value': estimated_value,
+            'actual_value': actual_value,
+            'estimated_percentage': (estimated_value / self.total_value * 100) if self.total_value > 0 else 0,
+            'has_estimated': estimated_count > 0,
+        }
     
     def __repr__(self) -> str:
         return (f"Portfolio(name={self.portfolio_name}, accounts={len(self.accounts)}, "

@@ -462,6 +462,7 @@ def load_portfolio_from_betterment_pdf(pdf_path: str, portfolio_name: str = "Bet
                     current_price=current_price,
                     asset_class=asset_class,
                     sector=sector,
+                    cost_basis_estimated=True,  # No cost basis in Betterment monthly statements
                 )
                 account.add_holding(holding)
 
@@ -758,6 +759,7 @@ def load_portfolio_from_titan_pdf(pdf_path: str, portfolio_name: str = "Titan Po
                 current_price=h['price'],
                 asset_class=asset_class,
                 sector=sector,
+                cost_basis_estimated=True,  # No cost basis in Titan statements
             )
             account.add_holding(holding)
 
@@ -968,6 +970,7 @@ def load_portfolio_from_acorns_pdf(pdf_path: str, portfolio_name: str = "Acorns 
                 current_price=h['price'],
                 asset_class=asset_class,
                 sector=sector,
+                cost_basis_estimated=True,  # No cost basis in Acorns statements
             )
             account.add_holding(holding)
 
@@ -1282,10 +1285,14 @@ def load_portfolio_from_empower_pdf(pdf_path: str, portfolio_name: str = "Empowe
                 plan_name = plan_match.group(1).strip()
                 account_name = f"401k - {plan_name[:30]}"
 
+            # Detect format: Wells Fargo uses 6 columns, others use 5 columns
+            is_wells_fargo_format = 'WELLS FARGO' in first_page.upper()
+
             # LEARNING: Holdings are on page 2 with format:
             # FundName Beginning Deposits/Changes Withdrawals Ending Shares
             # Example: Target Date 2040 Fund 78,297.22 14,643.17 -187.68 92,752.71 2,611.318
             # Some fund names span multiple lines (e.g., "Government\nInflation-Protected Bond\nFund")
+            # Wells Fargo format has 6 columns: Beginning Deposits ChangeInValue Transfers Ending Shares
 
             # Pattern for fund holdings - fund name followed by 5 numbers
             # Matches: FundName Beginning Deposits Withdrawals Ending Shares
@@ -1300,14 +1307,30 @@ def load_portfolio_from_empower_pdf(pdf_path: str, portfolio_name: str = "Empowe
 
             # Alternative pattern for multi-line fund names that start with numbers on a line
             # Format: "Government 13,058.78 1,071.83 1,002.82 15,133.43 633.978"
+            # Format: "Target Date 2040 Fund 78,297.22 14,643.17 -187.68 92,752.71 2,611.318"
+            # Format: "S&P MidCap 400 Index 5,222.08 489.67 480.76 6,192.51 235.125"
             # where "Government" continues from "Inflation-Protected Bond\nFund" on next lines
             multi_line_pattern = re.compile(
-                r'^([A-Za-z][A-Za-z\s]+)\s+'                         # Partial fund name
+                r'^([A-Za-z][A-Za-z0-9\s&\-]+)\s+'                    # Partial fund name (includes digits like 2040, 400)
                 r'([\d,]+\.\d{2})\s+'                                # Beginning balance
                 r'-?([\d,]+\.\d{2})\s+'                              # Deposits/Changes
                 r'-?([\d,]+\.\d{2})\s+'                              # Withdrawals
                 r'([\d,]+\.\d{2})\s+'                                # Ending balance
                 r'([\d,]+\.\d+)'                                     # Shares
+            )
+
+            # Wells Fargo format: 6 columns with possible negative Transfers
+            # Example: "Emerging Markets Equity 2,412.15 522.69 151.32 -96.29 2,989.87 147.042"
+            # Example: "State Street S&P 500 Index 12,909.66 2,845.73 376.81 -176.71 15,955.49 1,340.910"
+            # Columns: Beginning Deposits ChangeInValue Transfers Ending Shares
+            wells_fargo_pattern = re.compile(
+                r'^([A-Za-z][A-Za-z0-9\s&\-\']+?)\s+'                  # Fund name (includes digits like 500)
+                r'([\d,]+\.\d{2})\s+'                                 # Beginning balance
+                r'-?([\d,]+\.\d{2})\s+'                               # Deposits
+                r'-?([\d,]+\.\d{2})\s+'                               # Change in Value
+                r'-?([\d,]+\.\d{2})\s+'                               # Transfers (often negative)
+                r'([\d,]+\.\d{2})\s+'                                 # Ending balance
+                r'([\d,]+\.\d+)$'                                     # Shares
             )
 
             # Scan all pages for holdings
@@ -1328,51 +1351,91 @@ def load_portfolio_from_empower_pdf(pdf_path: str, portfolio_name: str = "Empowe
                         if 'How is my account' in line or 'Units/' in line:
                             continue
 
-                        # Try standard pattern first (single line with Fund/Index)
-                        match = holding_pattern.match(line)
-                        if match:
-                            fund_name = match.group(1).strip()
-                            ending_balance = float(match.group(5).replace(',', ''))
-                            shares = float(match.group(6).replace(',', ''))
+                        # Use format-specific pattern matching
+                        if is_wells_fargo_format:
+                            # Wells Fargo: 6 columns (Beginning Deposits Change Transfers Ending Shares)
+                            wf_match = wells_fargo_pattern.match(line)
+                            if wf_match:
+                                partial_name = wf_match.group(1).strip()
+                                # Check if the fund name is already complete (ends with Fund)
+                                full_name = partial_name
+                                if not full_name.endswith('Fund'):
+                                    # Check if next lines complete the fund name
+                                    for j in range(i + 1, min(i + 3, len(lines))):
+                                        next_line = lines[j].strip()
+                                        # Skip empty lines
+                                        if not next_line:
+                                            continue
+                                        # Skip category headers like "LargeCapFunds", "InternationalFunds", "Bond", "Other"
+                                        if next_line in ['Bond', 'Other'] or 'Funds' in next_line.replace(' ', ''):
+                                            break
+                                        # Stop at lines that look like data (contain many numbers with decimals)
+                                        if sum(1 for c in next_line if c.isdigit()) > 10:
+                                            break
+                                        # This looks like part of a fund name continuation
+                                        full_name += ' ' + next_line
+                                        # Stop once we have the complete name (ends with Fund)
+                                        if full_name.endswith('Fund') or next_line.endswith('M'):
+                                            # Note: Wells Fargo has some funds ending in "NL Cl M"
+                                            break
 
-                            if ending_balance > 0 and shares > 0:
-                                price_per_share = ending_balance / shares
-                                all_holdings.append({
-                                    'ticker': fund_name[:10].upper().replace(' ', ''),
-                                    'description': fund_name,
-                                    'quantity': shares,
-                                    'price': price_per_share,
-                                    'value': ending_balance,
-                                })
-                            pending_fund_parts = []
-                            continue
+                                ending_balance = float(wf_match.group(6).replace(',', ''))  # 6th group is ending balance
+                                shares = float(wf_match.group(7).replace(',', ''))  # 7th group is shares
 
-                        # Try multi-line pattern (partial name + numbers)
-                        multi_match = multi_line_pattern.match(line)
-                        if multi_match:
-                            partial_name = multi_match.group(1).strip()
-                            # Check if next lines complete the fund name
-                            full_name = partial_name
-                            for j in range(i + 1, min(i + 3, len(lines))):
-                                next_line = lines[j].strip()
-                                if next_line in ['Fund', 'Index'] or next_line.endswith('Fund') or next_line.endswith('Index'):
-                                    full_name += ' ' + next_line
-                                    break
-                                elif not any(c.isdigit() for c in next_line) and len(next_line) < 40:
-                                    full_name += ' ' + next_line
+                                if ending_balance > 0 and shares > 0:
+                                    price_per_share = ending_balance / shares
+                                    all_holdings.append({
+                                        'ticker': full_name[:10].upper().replace(' ', ''),
+                                        'description': full_name,
+                                        'quantity': shares,
+                                        'price': price_per_share,
+                                        'value': ending_balance,
+                                    })
+                        else:
+                            # JPMC and other formats: 5 columns (Beginning Deposits Withdrawals Ending Shares)
+                            multi_match = multi_line_pattern.match(line)
+                            if multi_match:
+                                partial_name = multi_match.group(1).strip()
+                                # Check if the fund name is already complete (ends with Fund)
+                                # Note: "Index" alone is NOT complete - JPMC has "Index Fund" names
+                                full_name = partial_name
+                                if not full_name.endswith('Fund'):
+                                    # Need to look at FOLLOWING lines to complete the fund name
+                                    # Multi-line fund names have the continuation AFTER the data line
+                                    # e.g., Line: "Government 13,058.78 ..."
+                                    #       Next: "Inflation-Protected Bond"
+                                    #       Next: "Fund"
+                                    # Or:   Line: "Large Cap Value Index 17,941.56 ..."
+                                    #       Next: "Fund"
+                                    for j in range(i + 1, min(i + 4, len(lines))):
+                                        next_line = lines[j].strip()
+                                        # Skip empty lines
+                                        if not next_line:
+                                            continue
+                                        # Stop at section headers or data lines
+                                        if 'Totals' in next_line or 'How is' in next_line:
+                                            break
+                                        # Stop at lines that look like data (contain many numbers with decimals)
+                                        if sum(1 for c in next_line if c.isdigit()) > 10:
+                                            break
+                                        # This looks like part of a fund name continuation
+                                        full_name += ' ' + next_line
+                                        # Stop once we have the complete name (ends with Fund)
+                                        if full_name.endswith('Fund'):
+                                            break
 
-                            ending_balance = float(multi_match.group(5).replace(',', ''))
-                            shares = float(multi_match.group(6).replace(',', ''))
+                                ending_balance = float(multi_match.group(5).replace(',', ''))
+                                shares = float(multi_match.group(6).replace(',', ''))
 
-                            if ending_balance > 0 and shares > 0:
-                                price_per_share = ending_balance / shares
-                                all_holdings.append({
-                                    'ticker': full_name[:10].upper().replace(' ', ''),
-                                    'description': full_name,
-                                    'quantity': shares,
-                                    'price': price_per_share,
-                                    'value': ending_balance,
-                                })
+                                if ending_balance > 0 and shares > 0:
+                                    price_per_share = ending_balance / shares
+                                    all_holdings.append({
+                                        'ticker': full_name[:10].upper().replace(' ', ''),
+                                        'description': full_name,
+                                        'quantity': shares,
+                                        'price': price_per_share,
+                                        'value': ending_balance,
+                                    })
 
         if not all_holdings:
             print(f"No holdings found in Empower PDF: {pdf_path}")
@@ -1399,6 +1462,7 @@ def load_portfolio_from_empower_pdf(pdf_path: str, portfolio_name: str = "Empowe
                 asset_class=asset_class,
                 sector=sector,
                 description=h.get('description', ''),  # Full fund name from PDF
+                cost_basis_estimated=True,  # No cost basis in Empower 401k statements
             )
             account.add_holding(holding)
 

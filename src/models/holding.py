@@ -6,7 +6,7 @@ from typing import Optional
 @dataclass
 class Holding:
     """Represents a single investment holding"""
-    
+
     ticker: str
     shares: float
     cost_basis_per_share: float
@@ -15,6 +15,7 @@ class Holding:
     asset_class: str = "Unknown"  # 'Stock', 'Bond', 'ETF', 'Mutual Fund', 'Cash', etc.
     sector: str = "Unknown"
     description: str = ""  # Full fund/security name from source (e.g., "Target Date 2045 Fund")
+    cost_basis_estimated: bool = False  # True if cost basis is estimated (using current price as proxy)
     
     @property
     def total_cost_basis(self) -> float:
