@@ -47,6 +47,25 @@
 
 ## Backlog
 
+### High Priority
+
+#### YTD Performance Tracking
+**Why:** Statements don't show year-to-date performance - users want to see how their investments performed this year
+**Effort:** Medium
+**Details:**
+- Fetch YTD performance data from external source (Yahoo Finance API, Alpha Vantage, etc.)
+- Show YTD % gain/loss for each holding
+- Show overall portfolio YTD performance
+- Color code: green for gains, red for losses
+- Option to compare against benchmarks (S&P 500 YTD, etc.)
+
+**Input Options:**
+- Automatic: Pull from Yahoo Finance API using ticker symbols
+- Manual: Allow user to input YTD % if they have it from another source
+- Hybrid: Auto-fetch with manual override capability
+
+---
+
 **Why:** Tax analyzer for investment accounts  
 **Effort:** Medium
 **Details:**
