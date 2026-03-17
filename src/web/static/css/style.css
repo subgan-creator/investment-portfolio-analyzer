@@ -1446,3 +1446,337 @@ footer {
         font-size: 0.8125rem;
     }
 }
+
+/* ============================================
+   LOOK-THROUGH ANALYSIS
+   ============================================ */
+.look-through-section {
+    background: linear-gradient(135deg, var(--card) 0%, var(--secondary) 100%);
+    border: 1px solid var(--primary);
+}
+
+.look-through-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.look-through-header h2 {
+    margin: 0;
+}
+
+.look-through-badge {
+    background: var(--primary);
+    color: white;
+    padding: 0.375rem 0.75rem;
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.matched-funds {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin: 1.5rem 0;
+}
+
+.matched-fund-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--secondary);
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius);
+    font-size: 0.875rem;
+}
+
+.matched-fund-ticker {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.matched-fund-arrow {
+    color: var(--muted-foreground);
+}
+
+.matched-fund-name {
+    font-weight: 500;
+}
+
+.matched-fund-allocations {
+    color: var(--muted-foreground);
+    font-size: 0.75rem;
+}
+
+.look-through-allocation {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+}
+
+.look-through-allocation h3 {
+    margin-bottom: 1rem;
+    font-size: 1.125rem;
+}
+
+/* Look-through CTA Card */
+.look-through-cta {
+    text-align: center;
+    padding: 2rem;
+    background: var(--secondary);
+    border: 2px dashed var(--border);
+}
+
+.look-through-cta .cta-icon {
+    margin-bottom: 1rem;
+    color: var(--muted-foreground);
+}
+
+.look-through-cta h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1.125rem;
+}
+
+.look-through-cta p {
+    color: var(--muted-foreground);
+    max-width: 500px;
+    margin: 0 auto 1.5rem;
+    line-height: 1.6;
+}
+
+/* Look-through legend colors - dynamic via JS */
+[class^="lt-color-"] {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+}
+
+/* ============================================
+   PORTFOLIO ALLOCATION SECTION
+   ============================================ */
+.allocation-section {
+    overflow: visible;
+}
+
+.allocation-section .allocation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 0;
+}
+
+.allocation-section .allocation-header h2 {
+    padding: 0;
+    border-bottom: none;
+    margin: 0;
+}
+
+.allocation-view-toggle {
+    display: flex;
+    gap: 0.25rem;
+    background: var(--secondary);
+    padding: 0.25rem;
+    border-radius: var(--radius);
+}
+
+.view-btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    background: transparent;
+    color: var(--muted-foreground);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: calc(var(--radius) - 2px);
+    transition: all 0.15s ease;
+}
+
+.view-btn:hover {
+    color: var(--foreground);
+}
+
+.view-btn.active {
+    background: var(--card);
+    color: var(--foreground);
+    box-shadow: var(--shadow-sm);
+}
+
+.allocation-view {
+    padding: 1.5rem;
+}
+
+.allocation-view.hidden {
+    display: none;
+}
+
+/* Category Legend Styles */
+.category-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+}
+
+.category-legend-item {
+    display: grid;
+    grid-template-columns: 16px 1fr auto auto;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-sm);
+    transition: background 0.15s ease;
+}
+
+.category-legend-item:hover {
+    background: var(--secondary);
+}
+
+.category-legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.category-legend-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+}
+
+.category-legend-name {
+    font-weight: 500;
+    font-size: 0.9375rem;
+    color: var(--foreground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.category-legend-items {
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+}
+
+.category-legend-percent {
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: var(--primary);
+    text-align: right;
+    min-width: 50px;
+}
+
+.category-legend-value {
+    color: var(--muted-foreground);
+    font-size: 0.8125rem;
+    text-align: right;
+    min-width: 80px;
+}
+
+/* Detailed Allocation Grid */
+.detailed-allocation-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.allocation-group {
+    background: var(--secondary);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+}
+
+.allocation-group-title {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted-foreground);
+    margin: 0 0 0.75rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.allocation-group-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.allocation-detail-item {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.375rem 0;
+}
+
+.detail-name {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--foreground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.detail-percent {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--primary);
+    text-align: right;
+    min-width: 45px;
+}
+
+.detail-value {
+    font-size: 0.8125rem;
+    color: var(--muted-foreground);
+    text-align: right;
+    min-width: 70px;
+}
+
+/* Section description */
+.section-desc {
+    padding: 0 1.5rem;
+    margin-bottom: 1rem;
+    color: var(--muted-foreground);
+    font-size: 0.9375rem;
+    line-height: 1.5;
+}
+
+/* Responsive adjustments for allocation section */
+@media (max-width: 640px) {
+    .allocation-section .allocation-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .allocation-view-toggle {
+        width: 100%;
+    }
+
+    .view-btn {
+        flex: 1;
+        text-align: center;
+    }
+
+    .category-legend-item {
+        grid-template-columns: 14px 1fr auto;
+    }
+
+    .category-legend-value {
+        display: none;
+    }
+
+    .detailed-allocation-grid {
+        grid-template-columns: 1fr;
+    }
+}

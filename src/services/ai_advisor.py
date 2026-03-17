@@ -34,27 +34,29 @@ class AIAdvisor:
 
     def build_system_prompt(self) -> str:
         """Build the system prompt with portfolio context."""
-        base_prompt = """You are an expert investment advisor with access to the user's portfolio data.
-Your role as a financial advisor is to provide personalized, actionable investment insights based on their actual holdings.
+        base_prompt = """You are an expert investment advisor with COMPLETE ACCESS to the user's portfolio data.
+You can see ALL their holdings, account values, allocations, and analysis scores - no need to ask for this information.
+
+CRITICAL: You already have their complete portfolio data below. When they ask questions like "where should I invest $5k?",
+USE THE DATA YOU HAVE to give specific recommendations. Do NOT ask them for information you already have.
 
 IMPORTANT GUIDELINES:
-- Be specific about their actual holdings when giving advice
-- Compare the portfolio for concentration risk and diversification
-- Explain complex financial concepts in simple terms
-- Provide actionable recommendations when appropriate
-- Consider tax implications of any suggested moves
-- Mention relevant market trends when helpful
+- ALWAYS reference their actual holdings by name when giving advice (e.g., "Since you already have 15% in VTI...")
+- Give SPECIFIC recommendations with ticker symbols and dollar amounts
+- Compare new investments against their CURRENT allocation to avoid overlap
+- Identify gaps in their portfolio that new money could fill
+- Consider tax implications based on their account types
 - Be conversational but professional
 - Keep responses concise but informative (2-4 paragraphs max)
-- Recommend clear next steps on what changes can be made to the investments
-- If you don't know something, say so honestly
+- Recommend clear next steps with specific actions
+- If they ask where to invest new money, suggest specific ETFs/funds based on what they're MISSING
 - Never provide specific buy/sell timing recommendations
 - Always remind users to consult a financial advisor for major decisions
 
-DISCLAIMER: Always remind users that this is educational information, not personalized financial advice."""
+DISCLAIMER: This is educational information, not personalized financial advice."""
 
         if not self.portfolio_data:
-            return base_prompt + "\n\nNote: No portfolio data is currently loaded."
+            return base_prompt + "\n\nNote: No portfolio data is currently loaded. Ask the user to upload their portfolio first."
 
         # Extract portfolio details
         portfolio = self.portfolio_data.get('portfolio', {})
@@ -64,15 +66,19 @@ DISCLAIMER: Always remind users that this is educational information, not person
         top_holdings = self.portfolio_data.get('top_holdings', [])
         asset_allocation = self.portfolio_data.get('asset_allocation', [])
         sector_allocation = self.portfolio_data.get('sector_allocation', [])
+        category_allocation = self.portfolio_data.get('category_allocation', [])
+        accounts = self.portfolio_data.get('accounts', [])
+        source_breakdown = self.portfolio_data.get('source_breakdown', [])
 
         # Build portfolio context
         context = f"""
 
-PORTFOLIO CONTEXT:
+=== COMPLETE PORTFOLIO DATA (USE THIS TO ANSWER QUESTIONS) ===
+
+PORTFOLIO SUMMARY:
 - Total Value: ${portfolio.get('total_value', 0):,.2f}
 - Total Cost Basis: ${portfolio.get('total_cost_basis', 0):,.2f}
-- Unrealized Gain/Loss: ${portfolio.get('unrealized_gain_loss', 0):,.2f}
-- Return: {portfolio.get('return_percent', 0):.2f}%
+- Unrealized Gain/Loss: ${portfolio.get('unrealized_gain_loss', 0):,.2f} ({portfolio.get('return_percent', 0):.2f}% return)
 - Number of Accounts: {portfolio.get('num_accounts', 0)}
 - Number of Holdings: {portfolio.get('num_holdings', 0)}
 
@@ -83,24 +89,60 @@ ANALYSIS SCORES:
 - Tax Efficiency Score: {tax.get('score', 'N/A')}/100 ({tax.get('rating', 'N/A')})
 """
 
+        # Add accounts breakdown
+        if accounts:
+            context += "\nACCOUNTS (by brokerage and tax status):\n"
+            for acc in accounts:
+                tax_status = acc.get('tax_status', 'unknown').replace('_', ' ').title()
+                context += f"- {acc.get('name', 'N/A')} ({acc.get('source', 'Unknown')}): ${acc.get('value', 0):,.0f} - {tax_status}, {acc.get('num_holdings', 0)} holdings\n"
+
+        # Add source breakdown
+        if source_breakdown:
+            context += "\nBROKERAGE BREAKDOWN:\n"
+            for src in source_breakdown:
+                context += f"- {src.get('name', 'N/A')}: ${src.get('value', 0):,.0f} ({src.get('percent', 0):.1f}%)\n"
+
+        # Add category allocation (high-level)
+        if category_allocation:
+            context += "\nCATEGORY ALLOCATION (high-level):\n"
+            for cat in category_allocation:
+                context += f"- {cat.get('name', 'N/A')}: {cat.get('percent', 0):.1f}% (${cat.get('value', 0):,.0f})\n"
+
         # Add top holdings
         if top_holdings:
-            context += "\nTOP HOLDINGS:\n"
+            context += "\nTOP 10 HOLDINGS (with gain/loss):\n"
             for h in top_holdings[:10]:
                 gain_status = "+" if h.get('gain_loss', 0) >= 0 else ""
-                context += f"- {h.get('ticker', 'N/A')}: ${h.get('value', 0):,.0f} ({h.get('percent', 0):.1f}%), Gain/Loss: {gain_status}${h.get('gain_loss', 0):,.0f}\n"
+                context += f"- {h.get('ticker', 'N/A')} ({h.get('name', '')}): ${h.get('value', 0):,.0f} ({h.get('percent', 0):.1f}%), Gain/Loss: {gain_status}${h.get('gain_loss', 0):,.0f}\n"
 
         # Add asset allocation
         if asset_allocation:
-            context += "\nASSET ALLOCATION:\n"
-            for a in asset_allocation[:8]:
+            context += "\nASSET CLASS ALLOCATION:\n"
+            for a in asset_allocation:
                 context += f"- {a.get('name', 'N/A')}: {a.get('percent', 0):.1f}% (${a.get('value', 0):,.0f})\n"
 
-        # Add sector allocation
+        # Add detailed sector allocation
         if sector_allocation:
-            context += "\nSECTOR ALLOCATION:\n"
-            for s in sector_allocation[:8]:
-                context += f"- {s.get('name', 'N/A')}: {s.get('percent', 0):.1f}%\n"
+            context += "\nDETAILED SECTOR BREAKDOWN:\n"
+            for s in sector_allocation[:15]:  # Show more sectors
+                context += f"- {s.get('name', 'N/A')}: {s.get('percent', 0):.1f}% (${s.get('value', 0):,.0f})\n"
+
+        # Add tax-loss harvesting opportunities if any
+        harvesting_opps = tax.get('harvesting_opportunities', [])
+        if harvesting_opps:
+            context += "\nTAX-LOSS HARVESTING OPPORTUNITIES:\n"
+            for opp in harvesting_opps[:5]:
+                context += f"- {opp.get('ticker', 'N/A')}: Loss of ${abs(opp.get('unrealized_loss', 0)):,.0f}, Potential tax savings: ${opp.get('potential_tax_savings', 0):,.0f}\n"
+
+        # Add concentrated positions if any
+        concentrated = concentration.get('concentrated_positions', [])
+        if concentrated:
+            context += "\nCONCENTRATED POSITIONS (above threshold):\n"
+            for pos in concentrated:
+                context += f"- {pos.get('ticker', 'N/A')}: {pos.get('percentage', 0):.1f}% - Risk Level: {pos.get('risk_level', 'N/A')}\n"
+
+        context += "\n=== END PORTFOLIO DATA ===\n"
+        context += "\nUse the above data to give specific, personalized recommendations. Do NOT ask the user for portfolio information - you already have it.\n"
 
         return base_prompt + context
 

@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ profile.fund_name }} - Fund Profile</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <h1>{{ profile.fund_name }}</h1>
+                <div class="header-actions">
+                    <a href="{{ url_for('fund_profiles') }}" class="btn btn-secondary">Back to Fund Profiles</a>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <!-- Fund Summary Card -->
+            <section class="card">
+                <div class="fund-summary">
+                    <div class="fund-meta">
+                        <span class="fund-badge">{{ profile.source or 'Unknown Source' }}</span>
+                        <span class="fund-badge fund-type">{{ profile.fund_type or 'Investment Fund' }}</span>
+                    </div>
+
+                    <div class="fund-stats">
+                        {% if profile.target_year %}
+                        <div class="stat-card">
+                            <span class="stat-label">Target Year</span>
+                            <span class="stat-value">{{ profile.target_year }}</span>
+                        </div>
+                        {% endif %}
+
+                        <div class="stat-card">
+                            <span class="stat-label">Risk Assessment</span>
+                            <span class="stat-value risk-{{ (profile.risk_assessment or 'unknown')|lower|replace(' ', '-') }}">
+                                {{ profile.risk_assessment or 'Not Available' }}
+                            </span>
+                        </div>
+
+                        {% if profile.expense_ratio %}
+                        <div class="stat-card">
+                            <span class="stat-label">Expense Ratio</span>
+                            <span class="stat-value">{{ "%.2f"|format(profile.expense_ratio) }}%</span>
+                        </div>
+                        {% endif %}
+
+                        <div class="stat-card">
+                            <span class="stat-label">Last Updated</span>
+                            <span class="stat-value">{{ profile.updated_at[:10] }}</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Asset Allocation -->
+            {% if profile.asset_allocation %}
+            <section class="card">
+                <h2>Asset Allocation</h2>
+                <div class="allocation-container">
+                    <div class="allocation-chart">
+                        <canvas id="allocationChart"></canvas>
+                    </div>
+                    <div class="allocation-legend">
+                        {% for category, percentage in profile.asset_allocation.items()|sort(attribute='1', reverse=True) %}
+                        <div class="legend-item">
+                            <span class="legend-color" data-category="{{ category }}"></span>
+                            <span class="legend-label">{{ category|replace('_', ' ')|title }}</span>
+                            <span class="legend-value">{{ "%.2f"|format(percentage) }}%</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+            {% endif %}
+
+            <!-- What This Means -->
+            <section class="card info-card">
+                <h2>What This Means for Your Portfolio</h2>
+                <div class="info-content">
+                    <p>
+                        When you have this fund in your 401(k), the portfolio analyzer will use this allocation
+                        breakdown instead of treating it as a single holding. This gives you:
+                    </p>
+                    <ul>
+                        {% if profile.asset_allocation %}
+                        {% set equity_total = (profile.asset_allocation.get('us_large_cap', 0) +
+                                               profile.asset_allocation.get('us_mid_cap', 0) +
+                                               profile.asset_allocation.get('us_small_cap', 0) +
+                                               profile.asset_allocation.get('international', 0) +
+                                               profile.asset_allocation.get('emerging_markets_equity', 0)) %}
+                        {% set fixed_income_total = (profile.asset_allocation.get('core_fixed_income', 0) +
+                                                     profile.asset_allocation.get('high_yield', 0) +
+                                                     profile.asset_allocation.get('emerging_markets_debt', 0) +
+                                                     profile.asset_allocation.get('ips', 0)) %}
+                        <li><strong>{{ "%.0f"|format(equity_total) }}% Equity exposure</strong> across US and international stocks</li>
+                        <li><strong>{{ "%.0f"|format(fixed_income_total) }}% Fixed Income</strong> in bonds and debt instruments</li>
+                        {% if profile.asset_allocation.get('reits', 0) > 0 %}
+                        <li><strong>{{ "%.1f"|format(profile.asset_allocation.get('reits', 0)) }}% Real Estate</strong> via REITs</li>
+                        {% endif %}
+                        {% if profile.asset_allocation.get('cash_alternatives', 0) > 0 %}
+                        <li><strong>{{ "%.1f"|format(profile.asset_allocation.get('cash_alternatives', 0)) }}% Cash/Cash Alternatives</strong></li>
+                        {% endif %}
+                        {% endif %}
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Delete Action -->
+            <section class="card danger-zone">
+                <h3>Danger Zone</h3>
+                <p>Deleting this fund profile will remove it from look-through analysis.</p>
+                <form action="{{ url_for('delete_fund_profile_route', profile_id=profile.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this fund profile?');">
+                    <button type="submit" class="btn btn-danger">Delete Fund Profile</button>
+                </form>
+            </section>
+        </main>
+    </div>
+
+    <style>
+        .fund-summary {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .fund-meta {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .fund-badge {
+            background: var(--primary-light);
+            color: var(--primary);
+            padding: 0.25rem 0.75rem;
+            border-radius: var(--radius-full);
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .fund-type {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+        }
+
+        .fund-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            text-align: center;
+        }
+
+        .stat-card .stat-label {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card .stat-value {
+            display: block;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .risk-higher {
+            color: var(--danger);
+        }
+
+        .risk-moderate-to-higher {
+            color: var(--warning);
+        }
+
+        .risk-moderate {
+            color: var(--info);
+        }
+
+        .allocation-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .allocation-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .allocation-chart {
+            max-width: 300px;
+            margin: 0 auto;
+        }
+
+        .allocation-legend {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-sm);
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        .legend-label {
+            flex: 1;
+            font-size: 0.875rem;
+        }
+
+        .legend-value {
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .info-card {
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+        }
+
+        .info-content ul {
+            margin: 1rem 0;
+            padding-left: 1.5rem;
+        }
+
+        .info-content li {
+            margin-bottom: 0.5rem;
+            line-height: 1.6;
+        }
+
+        .danger-zone {
+            border: 1px solid var(--danger);
+            background: rgba(220, 53, 69, 0.05);
+        }
+
+        .danger-zone h3 {
+            color: var(--danger);
+            margin-top: 0;
+        }
+    </style>
+
+    <script>
+        // Chart colors - colorful palette for asset classes
+        const chartColors = [
+            '#3b82f6', // blue - large cap
+            '#10b981', // green - mid cap
+            '#8b5cf6', // purple - small cap
+            '#f59e0b', // amber - reits
+            '#06b6d4', // cyan - international
+            '#ec4899', // pink - emerging equity
+            '#6366f1', // indigo - fixed income
+            '#f97316', // orange - high yield
+            '#14b8a6', // teal - em debt
+            '#a855f7', // violet - ips
+            '#64748b', // slate - cash
+        ];
+
+        // Set legend colors
+        document.querySelectorAll('.legend-color').forEach((el, idx) => {
+            el.style.backgroundColor = chartColors[idx % chartColors.length];
+        });
+
+        // Asset allocation data from Jinja
+        const allocationData = {{ profile.asset_allocation | tojson | safe }};
+
+        if (Object.keys(allocationData).length > 0) {
+            // Sort by value descending
+            const sortedEntries = Object.entries(allocationData).sort((a, b) => b[1] - a[1]);
+            const labels = sortedEntries.map(([key, _]) => key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
+            const values = sortedEntries.map(([_, val]) => val);
+
+            const ctx = document.getElementById('allocationChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: chartColors.slice(0, values.length),
+                        borderWidth: 2,
+                        borderColor: '#ffffff',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: false,
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.label + ': ' + context.parsed.toFixed(2) + '%';
+                                }
+                            }
+                        }
+                    },
+                    cutout: '60%',
+                }
+            });
+        }
+    </script>
+</body>
+</html>

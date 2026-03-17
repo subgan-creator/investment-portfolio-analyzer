@@ -267,27 +267,128 @@
             </section>
             {% endif %}
 
-            <!-- Sector Allocation -->
-            {% if data.sector_allocation and data.sector_allocation|length > 0 %}
-            <section class="card">
-                <h2>Sector Allocation</h2>
-                <div class="source-breakdown-container">
-                    <div class="source-chart-container">
-                        <div class="source-pie-chart" style="width: 220px; height: 220px;">
-                            <canvas id="sectorChart" width="220" height="220"></canvas>
-                        </div>
-                        <div class="sector-legend">
-                            {% for sector in data.sector_allocation %}
-                            <div class="sector-legend-item">
-                                <span class="sector-legend-color sector-color-{{ loop.index }}"></span>
-                                <span class="sector-legend-name">{{ sector.name }}</span>
-                                <span class="sector-legend-percent">{{ "{:.1f}".format(sector.percent) }}%</span>
-                                <span class="sector-legend-value">${{ "{:,.0f}".format(sector.value) }}</span>
+            <!-- Portfolio Allocation - Two Views -->
+            {% if data.category_allocation and data.category_allocation|length > 0 %}
+            <section class="card allocation-section">
+                <div class="allocation-header">
+                    <h2>Portfolio Allocation</h2>
+                    <div class="allocation-view-toggle">
+                        <button class="view-btn active" data-view="summary" onclick="toggleAllocationView('summary')">Summary</button>
+                        <button class="view-btn" data-view="detailed" onclick="toggleAllocationView('detailed')">Detailed</button>
+                    </div>
+                </div>
+
+                <!-- Summary View: Category Groups -->
+                <div class="allocation-view" id="summaryView">
+                    <div class="source-breakdown-container">
+                        <div class="source-chart-container">
+                            <div class="source-pie-chart" style="width: 240px; height: 240px;">
+                                <canvas id="categoryChart" width="240" height="240"></canvas>
                             </div>
-                            {% endfor %}
+                            <div class="category-legend">
+                                {% for cat in data.category_allocation %}
+                                <div class="category-legend-item" data-category="{{ cat.name }}">
+                                    <span class="category-legend-color cat-color-{{ loop.index }}"></span>
+                                    <div class="category-legend-info">
+                                        <span class="category-legend-name">{{ cat.name }}</span>
+                                        <span class="category-legend-items">{{ (cat.get('items') or [])|length }} holdings</span>
+                                    </div>
+                                    <span class="category-legend-percent">{{ "{:.1f}".format(cat.percent) }}%</span>
+                                    <span class="category-legend-value">${{ "{:,.0f}".format(cat.value) }}</span>
+                                </div>
+                                {% endfor %}
+                            </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- Detailed View: Standardized Labels -->
+                <div class="allocation-view hidden" id="detailedView">
+                    <div class="detailed-allocation-grid">
+                        {% for group_name in ['Equity: Domestic', 'Equity: International', 'Equity: Sector', 'Fixed Income', 'Real Assets', 'Alternatives', 'Multi-Asset', 'Cash Equivalents', 'Other'] %}
+                        {% set group_items = data.sector_allocation|selectattr('category_group', 'equalto', group_name)|list %}
+                        {% if group_items|length > 0 %}
+                        <div class="allocation-group">
+                            <h4 class="allocation-group-title">{{ group_name }}</h4>
+                            <div class="allocation-group-items">
+                                {% for item in group_items|sort(attribute='value', reverse=true) %}
+                                <div class="allocation-detail-item">
+                                    <span class="detail-name">{{ item.name }}</span>
+                                    <span class="detail-percent">{{ "{:.1f}".format(item.percent) }}%</span>
+                                    <span class="detail-value">${{ "{:,.0f}".format(item.value) }}</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+            {% endif %}
+
+            <!-- Look-Through Analysis for Target Date Funds -->
+            {% if data.look_through and data.look_through.available and data.look_through.matchable_holdings|length > 0 %}
+            <section class="card look-through-section">
+                <div class="look-through-header">
+                    <h2>Look-Through Analysis</h2>
+                    <span class="look-through-badge">{{ data.look_through.matchable_holdings|length }} fund(s) expanded</span>
+                </div>
+                <p class="section-desc">
+                    Your target date funds have been expanded to show their underlying asset allocation,
+                    giving you a more accurate view of your true portfolio exposure.
+                </p>
+
+                <!-- Matched Funds -->
+                <div class="matched-funds">
+                    {% for match in data.look_through.matchable_holdings %}
+                    <div class="matched-fund-item">
+                        <span class="matched-fund-ticker">{{ match.ticker }}</span>
+                        <span class="matched-fund-arrow">&rarr;</span>
+                        <span class="matched-fund-name">{{ match.matched_fund }}</span>
+                        <span class="matched-fund-allocations">{{ match.num_allocations }} asset classes</span>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Look-Through Allocation Chart -->
+                {% if data.look_through.allocation and data.look_through.allocation|length > 0 %}
+                <div class="look-through-allocation">
+                    <h3>True Asset Allocation</h3>
+                    <div class="source-breakdown-container">
+                        <div class="source-chart-container">
+                            <div class="source-pie-chart" style="width: 220px; height: 220px;">
+                                <canvas id="lookThroughChart" width="220" height="220"></canvas>
+                            </div>
+                            <div class="sector-legend">
+                                {% for item in data.look_through.allocation %}
+                                <div class="sector-legend-item">
+                                    <span class="sector-legend-color lt-color-{{ loop.index }}"></span>
+                                    <span class="sector-legend-name">{{ item.name }}</span>
+                                    <span class="sector-legend-percent">{{ "{:.1f}".format(item.percent) }}%</span>
+                                    <span class="sector-legend-value">${{ "{:,.0f}".format(item.value) }}</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </section>
+            {% elif data.look_through and not data.look_through.available %}
+            <!-- No Fund Profiles Uploaded - Show Call to Action -->
+            <section class="card look-through-cta">
+                <div class="cta-icon">
+                    <svg viewBox="0 0 24 24" width="48" height="48" fill="currentColor" opacity="0.5">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/>
+                    </svg>
+                </div>
+                <h3>Unlock Look-Through Analysis</h3>
+                <p>
+                    Upload your 401(k) fund profile document to see the true allocation of your target date funds.
+                    This helps you understand your actual exposure to stocks, bonds, and international investments.
+                </p>
+                <a href="{{ url_for('fund_profiles') }}" class="btn btn-primary">Upload Fund Profiles</a>
             </section>
             {% endif %}
 
@@ -471,22 +572,37 @@
             });
         }
 
-        // Sector pie chart
-        const sectorChartCanvas = document.getElementById('sectorChart');
-        if (sectorChartCanvas) {
-            const sectorData = [
-                {% for sector in data.sector_allocation %}
-                { name: '{{ sector.name }}', value: {{ sector.value }} }{% if not loop.last %},{% endif %}
+        // Category Group pie chart (consolidated view)
+        const categoryChartCanvas = document.getElementById('categoryChart');
+        if (categoryChartCanvas) {
+            // Colors for category groups - consistent and meaningful
+            const categoryColors = {
+                'Equity: Domestic': '#3b82f6',      // Blue
+                'Equity: International': '#06b6d4', // Cyan
+                'Equity: Sector': '#8b5cf6',        // Purple
+                'Fixed Income': '#10b981',          // Green
+                'Real Assets': '#f59e0b',           // Amber
+                'Alternatives': '#ec4899',          // Pink
+                'Multi-Asset': '#6366f1',           // Indigo
+                'Cash Equivalents': '#64748b',      // Slate
+                'Other': '#9ca3af',                 // Gray
+            };
+
+            const categoryData = [
+                {% for cat in data.category_allocation %}
+                { name: '{{ cat.name }}', value: {{ cat.value }} }{% if not loop.last %},{% endif %}
                 {% endfor %}
             ];
 
-            new Chart(sectorChartCanvas, {
+            const catColors = categoryData.map(d => categoryColors[d.name] || '#9ca3af');
+
+            new Chart(categoryChartCanvas, {
                 type: 'doughnut',
                 data: {
-                    labels: sectorData.map(d => d.name),
+                    labels: categoryData.map(d => d.name),
                     datasets: [{
-                        data: sectorData.map(d => d.value),
-                        backgroundColor: chartColors.slice(0, sectorData.length),
+                        data: categoryData.map(d => d.value),
+                        backgroundColor: catColors,
                         borderWidth: 2,
                         borderColor: '#ffffff',
                     }]
@@ -510,6 +626,103 @@
                     cutout: '55%'
                 }
             });
+
+            // Set legend colors dynamically
+            document.querySelectorAll('.category-legend-item').forEach((item, idx) => {
+                const catName = item.getAttribute('data-category');
+                const color = categoryColors[catName] || '#9ca3af';
+                const colorEl = item.querySelector('.category-legend-color');
+                if (colorEl) {
+                    colorEl.style.backgroundColor = color;
+                }
+            });
+        }
+
+        // Toggle function for allocation views
+        function toggleAllocationView(view) {
+            const summaryView = document.getElementById('summaryView');
+            const detailedView = document.getElementById('detailedView');
+            const buttons = document.querySelectorAll('.view-btn');
+
+            buttons.forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`[data-view="${view}"]`).classList.add('active');
+
+            if (view === 'summary') {
+                summaryView.classList.remove('hidden');
+                detailedView.classList.add('hidden');
+            } else {
+                summaryView.classList.add('hidden');
+                detailedView.classList.remove('hidden');
+            }
+        }
+
+        // Make toggleAllocationView available globally
+        window.toggleAllocationView = toggleAllocationView;
+
+        // Look-Through Analysis chart
+        const lookThroughChartCanvas = document.getElementById('lookThroughChart');
+        if (lookThroughChartCanvas) {
+            const ltData = [
+                {% if data.look_through and data.look_through.allocation %}
+                {% for item in data.look_through.allocation %}
+                { name: '{{ item.name }}', value: {{ item.value }} }{% if not loop.last %},{% endif %}
+                {% endfor %}
+                {% endif %}
+            ];
+
+            if (ltData.length > 0) {
+                // Use a different color palette for look-through chart
+                const ltColors = [
+                    '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+                    '#06b6d4', '#ec4899', '#14b8a6', '#f97316', '#6366f1',
+                    '#84cc16', '#a855f7'
+                ];
+
+                new Chart(lookThroughChartCanvas, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ltData.map(d => d.name),
+                        datasets: [{
+                            data: ltData.map(d => d.value),
+                            backgroundColor: ltColors.slice(0, ltData.length),
+                            borderWidth: 2,
+                            borderColor: '#ffffff',
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const value = context.raw;
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percent = ((value / total) * 100).toFixed(1);
+                                        return `$${value.toLocaleString()} (${percent}%)`;
+                                    }
+                                }
+                            }
+                        },
+                        cutout: '55%'
+                    }
+                });
+
+                // Set legend colors for look-through chart
+                document.querySelectorAll('.lt-color-1').forEach(el => el.style.backgroundColor = ltColors[0]);
+                document.querySelectorAll('.lt-color-2').forEach(el => el.style.backgroundColor = ltColors[1]);
+                document.querySelectorAll('.lt-color-3').forEach(el => el.style.backgroundColor = ltColors[2]);
+                document.querySelectorAll('.lt-color-4').forEach(el => el.style.backgroundColor = ltColors[3]);
+                document.querySelectorAll('.lt-color-5').forEach(el => el.style.backgroundColor = ltColors[4]);
+                document.querySelectorAll('.lt-color-6').forEach(el => el.style.backgroundColor = ltColors[5]);
+                document.querySelectorAll('.lt-color-7').forEach(el => el.style.backgroundColor = ltColors[6]);
+                document.querySelectorAll('.lt-color-8').forEach(el => el.style.backgroundColor = ltColors[7]);
+                document.querySelectorAll('.lt-color-9').forEach(el => el.style.backgroundColor = ltColors[8]);
+                document.querySelectorAll('.lt-color-10').forEach(el => el.style.backgroundColor = ltColors[9]);
+                document.querySelectorAll('.lt-color-11').forEach(el => el.style.backgroundColor = ltColors[10]);
+                document.querySelectorAll('.lt-color-12').forEach(el => el.style.backgroundColor = ltColors[11]);
+            }
         }
     </script>
 

@@ -27,7 +27,18 @@ from src.models.chat import (
     init_chat_db, save_message, get_messages, get_messages_for_api,
     clear_messages, get_message_count
 )
+from src.models.fund_profile import (
+    init_fund_profiles_db, save_fund_profile, get_all_fund_profiles,
+    get_fund_profile_by_id, delete_fund_profile, get_fund_profiles_summary,
+    find_matching_profile
+)
 from src.services.ai_advisor import AIAdvisor, is_api_configured
+from src.services.fund_matcher import (
+    get_look_through_summary, calculate_look_through_allocation,
+    match_holding_to_profile
+)
+from src.utils.fund_profile_parser import parse_fund_profile_pdf, validate_fund_profile
+from src.utils.sector_classifier import classify_holding, consolidate_by_category_group, CATEGORY_GROUP_ORDER
 
 app = Flask(__name__,
             template_folder='templates',
@@ -45,6 +56,7 @@ ALLOWED_EXTENSIONS = {'csv', 'pdf'}
 # Initialize databases
 init_db()
 init_chat_db()
+init_fund_profiles_db()
 
 # Ticker information database - full names and descriptions
 TICKER_INFO = {
@@ -634,21 +646,43 @@ def analyze():
                 'percent': percent,
             })
 
-        # Sector allocation - calculate values by sector
-        sector_values = {}
+        # Sector allocation - using standardized classification
+        # Build detailed allocation with standardized labels and category groups
+        sector_details = {}  # key: standardized_label, value: {value, category_group}
         for holding in portfolio.get_all_holdings():
-            sector = infer_sector(holding.ticker, holding.sector)
-            if sector not in sector_values:
-                sector_values[sector] = 0
-            sector_values[sector] += holding.market_value
+            description = getattr(holding, 'description', '')
+            existing_sector = holding.sector if hasattr(holding, 'sector') else ''
 
-        for sector, value in sorted(sector_values.items(), key=lambda x: x[1], reverse=True):
-            percent = (value / portfolio.total_value * 100) if portfolio.total_value > 0 else 0
-            analysis_data['sector_allocation'].append({
-                'name': sector,
-                'value': value,
+            # Use new classifier
+            standardized_label, category_group = classify_holding(
+                holding.ticker,
+                description,
+                existing_sector
+            )
+
+            if standardized_label not in sector_details:
+                sector_details[standardized_label] = {
+                    'value': 0,
+                    'category_group': category_group
+                }
+            sector_details[standardized_label]['value'] += holding.market_value
+
+        # Build detailed sector allocation (standardized labels)
+        detailed_allocation = []
+        for label, data in sorted(sector_details.items(), key=lambda x: x[1]['value'], reverse=True):
+            percent = (data['value'] / portfolio.total_value * 100) if portfolio.total_value > 0 else 0
+            detailed_allocation.append({
+                'name': label,
+                'value': data['value'],
                 'percent': percent,
+                'category_group': data['category_group'],
             })
+
+        # Store detailed allocation
+        analysis_data['sector_allocation'] = detailed_allocation
+
+        # Build consolidated category group allocation
+        analysis_data['category_allocation'] = consolidate_by_category_group(detailed_allocation)
 
         # Top holdings - consolidate by ticker to avoid duplicates across accounts
         holdings_by_ticker = {}
@@ -742,6 +776,45 @@ def analyze():
             'estimated_liability': cap_gains.get('total_estimated_tax_liability', 0) if isinstance(cap_gains, dict) else 0,
             'harvesting_opportunities': harvesting_opps,
             'potential_savings': sum(h.get('potential_tax_savings', 0) for h in harvesting_opps),
+        }
+
+        # Look-Through Analysis for Target Date Funds
+        # Build holdings list for look-through analysis
+        holdings_for_lookthrough = []
+        for holding in portfolio.get_all_holdings():
+            holdings_for_lookthrough.append({
+                'ticker': holding.ticker,
+                'description': getattr(holding, 'description', ''),
+                'market_value': holding.market_value,
+                'asset_class': holding.asset_class,
+            })
+
+        # Get look-through summary (which holdings can be expanded)
+        # Use the first account's type as a hint for source matching
+        account_type_hint = portfolio.accounts[0].account_type if portfolio.accounts else ''
+        look_through_summary = get_look_through_summary(holdings_for_lookthrough, account_type_hint)
+
+        # Calculate look-through allocation if profiles are available
+        look_through_allocation = []
+        if look_through_summary.get('available') and look_through_summary.get('matchable_holdings'):
+            lt_allocation = calculate_look_through_allocation(
+                holdings_for_lookthrough,
+                portfolio.total_value,
+                account_type_hint
+            )
+            for asset_class, percent in sorted(lt_allocation.items(), key=lambda x: -x[1]):
+                value = portfolio.total_value * (percent / 100)
+                look_through_allocation.append({
+                    'name': asset_class,
+                    'value': value,
+                    'percent': percent,
+                })
+
+        analysis_data['look_through'] = {
+            'available': look_through_summary.get('available', False),
+            'message': look_through_summary.get('message', ''),
+            'matchable_holdings': look_through_summary.get('matchable_holdings', []),
+            'allocation': look_through_allocation,
         }
 
         return render_template('results.html', data=analysis_data)
@@ -997,6 +1070,166 @@ def chat_status():
         'available': is_api_configured(),
         'message': 'AI advisor is ready' if is_api_configured() else 'Please configure ANTHROPIC_API_KEY in .env file'
     })
+
+
+# ==================== FUND PROFILE ROUTES ====================
+
+@app.route('/fund-profiles')
+def fund_profiles():
+    """Display and manage fund profiles."""
+    profiles = get_fund_profiles_summary()
+    return render_template('fund_profiles.html', profiles=profiles)
+
+
+@app.route('/fund-profiles/upload', methods=['POST'])
+def upload_fund_profile():
+    """Upload and parse a fund profile PDF."""
+    if 'file' not in request.files:
+        flash('No file selected', 'error')
+        return redirect(url_for('fund_profiles'))
+
+    file = request.files['file']
+
+    if file.filename == '':
+        flash('No file selected', 'error')
+        return redirect(url_for('fund_profiles'))
+
+    if not file.filename.lower().endswith('.pdf'):
+        flash('Please upload a PDF file', 'error')
+        return redirect(url_for('fund_profiles'))
+
+    try:
+        # Save uploaded file temporarily
+        filename = secure_filename(file.filename)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        unique_filename = f"fund_profile_{timestamp}_{filename}"
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+        file.save(filepath)
+
+        # Parse the fund profile PDF
+        profiles = parse_fund_profile_pdf(filepath)
+
+        if not profiles:
+            flash('Could not extract any fund profiles from the PDF. Please check the format.', 'error')
+            return redirect(url_for('fund_profiles'))
+
+        # Save each profile to database
+        saved_count = 0
+        skipped_count = 0
+        for profile_data in profiles:
+            # Validate profile
+            is_valid, issues = validate_fund_profile(profile_data)
+
+            if is_valid:
+                # Check if fund already exists
+                existing = find_matching_profile(
+                    profile_data['fund_name'],
+                    profile_data.get('source')
+                )
+
+                if existing:
+                    skipped_count += 1
+                    continue
+
+                # Save to database
+                save_fund_profile(
+                    fund_name=profile_data['fund_name'],
+                    source=profile_data.get('source'),
+                    fund_type=profile_data.get('fund_type'),
+                    target_year=profile_data.get('target_year'),
+                    risk_assessment=profile_data.get('risk_assessment'),
+                    expense_ratio=profile_data.get('expense_ratio'),
+                    asset_allocation=profile_data.get('asset_allocation'),
+                    sector_breakdown=profile_data.get('sector_breakdown'),
+                    top_holdings=profile_data.get('top_holdings'),
+                )
+                saved_count += 1
+
+        if saved_count > 0:
+            flash(f'Successfully imported {saved_count} fund profile(s).', 'success')
+        if skipped_count > 0:
+            flash(f'Skipped {skipped_count} existing fund profile(s).', 'info')
+
+        # Clean up temp file
+        os.remove(filepath)
+
+        return redirect(url_for('fund_profiles'))
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        flash(f'Error processing fund profile: {str(e)}', 'error')
+        return redirect(url_for('fund_profiles'))
+
+
+@app.route('/fund-profiles/<int:profile_id>')
+def view_fund_profile(profile_id):
+    """View details of a specific fund profile."""
+    profile = get_fund_profile_by_id(profile_id)
+    if not profile:
+        flash('Fund profile not found', 'error')
+        return redirect(url_for('fund_profiles'))
+
+    return render_template('fund_profile_detail.html', profile=profile.to_dict())
+
+
+@app.route('/fund-profiles/<int:profile_id>/delete', methods=['POST'])
+def delete_fund_profile_route(profile_id):
+    """Delete a fund profile."""
+    if delete_fund_profile(profile_id):
+        flash('Fund profile deleted successfully', 'success')
+    else:
+        flash('Fund profile not found', 'error')
+    return redirect(url_for('fund_profiles'))
+
+
+@app.route('/api/fund-profiles')
+def api_get_fund_profiles():
+    """API endpoint to get all fund profiles."""
+    profiles = get_all_fund_profiles()
+    return jsonify({
+        'success': True,
+        'profiles': [p.to_dict() for p in profiles]
+    })
+
+
+@app.route('/api/fund-profiles/<int:profile_id>')
+def api_get_fund_profile(profile_id):
+    """API endpoint to get a specific fund profile."""
+    profile = get_fund_profile_by_id(profile_id)
+    if not profile:
+        return jsonify({'success': False, 'error': 'Fund profile not found'}), 404
+
+    return jsonify({
+        'success': True,
+        'profile': profile.to_dict()
+    })
+
+
+@app.route('/api/fund-profiles/match', methods=['POST'])
+def api_match_fund_profile():
+    """API endpoint to find a matching fund profile for a holding."""
+    data = request.get_json()
+    if not data or 'fund_name' not in data:
+        return jsonify({'success': False, 'error': 'Fund name required'}), 400
+
+    profile = find_matching_profile(
+        data['fund_name'],
+        data.get('source')
+    )
+
+    if profile:
+        return jsonify({
+            'success': True,
+            'matched': True,
+            'profile': profile.to_dict()
+        })
+    else:
+        return jsonify({
+            'success': True,
+            'matched': False,
+            'message': 'No matching fund profile found'
+        })
 
 
 if __name__ == '__main__':
