@@ -618,20 +618,40 @@ def classify_titan_ticker(ticker: str, description: str = "") -> Tuple[str, str]
 def detect_titan_pdf(pdf_path: str) -> bool:
     """
     Check if a PDF is a Titan/Apex Clearing statement.
-    LEARNING: We look for identifying markers in the first page.
+
+    LEARNING: Titan statements may have privacy notices on first pages (as of Feb 2026).
+    We check the first 10 pages for identifying markers to handle this.
+
+    Detection markers:
+    - "TITAN" (the broker name)
+    - "Apex Clearing" or "Apex Fintech" (the clearing firm)
+    - Account format like "ACCOUNT NUMBER" with pattern like "3TQ-XXXXX-XX"
     """
     if not PDF_SUPPORT:
         return False
 
     try:
         with pdfplumber.open(pdf_path) as pdf:
-            if len(pdf.pages) > 0:
-                first_page = pdf.pages[0].extract_text()
-                if first_page:
-                    # Titan statements have "TITAN" and "Apex Clearing" markers
-                    has_titan = 'TITAN' in first_page
-                    has_apex = 'Apex Clearing' in first_page
-                    return has_titan and has_apex
+            # Check first 10 pages for markers (handles privacy notice pages)
+            pages_to_check = min(10, len(pdf.pages))
+            combined_text = ""
+
+            for i in range(pages_to_check):
+                page_text = pdf.pages[i].extract_text() or ""
+                combined_text += page_text + "\n"
+
+                # Early exit if we find markers
+                has_titan = 'TITAN' in page_text.upper()
+                has_apex = 'Apex Clearing' in page_text or 'Apex Fintech' in page_text or 'APEX' in page_text.upper()
+
+                if has_titan and has_apex:
+                    return True
+
+            # Final check on combined text
+            has_titan = 'TITAN' in combined_text.upper()
+            has_apex = 'Apex Clearing' in combined_text or 'Apex Fintech' in combined_text
+            return has_titan and has_apex
+
     except Exception:
         pass
     return False
@@ -676,13 +696,22 @@ def load_portfolio_from_titan_pdf(pdf_path: str, portfolio_name: str = "Titan Po
 
     try:
         with pdfplumber.open(pdf_path) as pdf:
-            # Extract account info from first page
-            first_page = pdf.pages[0].extract_text() or ''
+            # LEARNING: Titan statements may have privacy notices on first pages (Feb 2026+)
+            # Scan first 10 pages for account info
+            for i in range(min(10, len(pdf.pages))):
+                page_text = pdf.pages[i].extract_text() or ''
 
-            # Try to get account number
-            acc_match = re.search(r'ACCOUNT NUMBER\s+(\S+)', first_page)
-            if acc_match:
-                account_number = acc_match.group(1)
+                # Try to get account number (format: 3TQ-XXXXX-XX)
+                acc_match = re.search(r'ACCOUNT NUMBER\s+([A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+)', page_text)
+                if acc_match:
+                    account_number = acc_match.group(1)
+                    break
+
+                # Alternative pattern
+                acc_match2 = re.search(r'ACCOUNT NUMBER\s+(\S+)', page_text)
+                if acc_match2 and acc_match2.group(1) not in ['RR', 'TTA']:
+                    account_number = acc_match2.group(1)
+                    break
 
             # Scan all pages for holdings
             for page in pdf.pages:

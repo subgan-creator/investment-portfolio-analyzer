@@ -97,6 +97,74 @@ Unit tests should be added to `tests/` directory:
 
 ---
 
+### DEF-002: Titan/Apex PDF Detection Fails When Privacy Notices Precede Statement
+
+**Date Found:** March 17, 2025
+**Severity:** High
+**Status:** Resolved
+
+**Symptoms:**
+- Titan Feb 2026 PDF statement fails to parse
+- Error: "Unknown PDF format"
+- Detection logic returns false, causing the file to be rejected
+
+**Root Cause:**
+Starting Feb 2026, Titan/Apex Clearing statements include privacy notice pages (3+ pages) at the beginning of the PDF before the actual account statement. The detection logic only checked the first page for markers like "TITAN" and "Apex Clearing", which are no longer on page 1.
+
+PDF structure changed from:
+```
+Page 1: Account statement header with TITAN and Apex Clearing
+Page 2+: Holdings, transactions, etc.
+```
+
+To:
+```
+Page 1-3: Privacy notices ("NOTICE OF CHANGES", "APEX CONSUMER PRIVACY NOTICES")
+Page 4+: Account statement with TITAN and Apex Clearing markers
+Page 7+: Holdings data
+```
+
+**Fix Applied:**
+1. Updated `detect_titan_pdf()` to scan first 10 pages for markers instead of just page 1
+2. Added early exit optimization when markers are found
+3. Added multiple marker patterns: "Apex Clearing", "Apex Fintech", "APEX"
+4. Updated `load_portfolio_from_titan_pdf()` to scan first 10 pages for account number
+5. Added more robust account number regex pattern for format like "3TQ-XXXXX-XX"
+
+**Files Changed:**
+- `src/utils/pdf_parser.py` - `detect_titan_pdf()` and `load_portfolio_from_titan_pdf()` functions
+
+**Verification:**
+```bash
+python3 -c "
+from src.utils.pdf_parser import load_portfolio_from_pdf
+
+pdf_path = 'data/Feb 2026 statements/Titan Feb 2026.pdf'
+portfolio = load_portfolio_from_pdf(pdf_path, 'Test')
+if portfolio:
+    print(f'Success! Holdings: {len(portfolio.accounts[0].holdings)}')
+    print(f'Account: {portfolio.accounts[0].account_id}')
+    print(f'Total: \${portfolio.total_value:,.2f}')
+else:
+    print('FAILED')
+"
+```
+
+**Expected Results:**
+| Field | Expected Value |
+|-------|---------------|
+| Detection | "Detected Titan/Apex Clearing PDF format" |
+| Account Number | 3TQ-61333-12 |
+| Holdings Count | 57 |
+| Total Value | ~$75,336.79 |
+
+**Prevention:**
+- PDF parsers should check multiple pages for format detection markers
+- Account info extraction should not assume fixed page positions
+- Consider adding format version detection for future statement changes
+
+---
+
 ## Open Defects
 
 *None currently tracked*
