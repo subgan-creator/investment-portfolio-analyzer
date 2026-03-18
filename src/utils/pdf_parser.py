@@ -3,6 +3,7 @@ PDF Parser for investment statements.
 Supports Betterment statement format.
 """
 import re
+import gc
 from datetime import datetime
 from typing import Optional, List, Dict, Tuple
 from ..models import Portfolio, Account, Holding
@@ -1524,32 +1525,64 @@ def load_portfolio_from_pdf(pdf_path: str, portfolio_name: str = "My Portfolio")
         print("PDF support not available. Install pdfplumber: pip install pdfplumber")
         return None
 
-    # Detect PDF type and use appropriate parser
-    # LEARNING: Order matters - check most specific formats first
+    result = None
 
-    if detect_titan_pdf(pdf_path):
-        print(f"Detected Titan/Apex Clearing PDF format")
-        return load_portfolio_from_titan_pdf(pdf_path, portfolio_name)
+    try:
+        # Detect PDF type and use appropriate parser
+        # LEARNING: Order matters - check most specific formats first
+        # NOTE: Each detection opens and closes the PDF, so we force gc between checks
+        # to keep memory usage low on limited-memory servers
 
-    if detect_betterment_pdf(pdf_path):
-        print(f"Detected Betterment PDF format")
-        return load_portfolio_from_betterment_pdf(pdf_path, portfolio_name)
+        if detect_titan_pdf(pdf_path):
+            gc.collect()
+            print(f"Detected Titan/Apex Clearing PDF format")
+            result = load_portfolio_from_titan_pdf(pdf_path, portfolio_name)
+            gc.collect()
+            return result
 
-    if detect_acorns_pdf(pdf_path):
-        print(f"Detected Acorns PDF format")
-        return load_portfolio_from_acorns_pdf(pdf_path, portfolio_name)
+        gc.collect()
 
-    if detect_arta_pdf(pdf_path):
-        print(f"Detected Arta Finance PDF format")
-        return load_portfolio_from_arta_pdf(pdf_path, portfolio_name)
+        if detect_betterment_pdf(pdf_path):
+            gc.collect()
+            print(f"Detected Betterment PDF format")
+            result = load_portfolio_from_betterment_pdf(pdf_path, portfolio_name)
+            gc.collect()
+            return result
 
-    if detect_empower_pdf(pdf_path):
-        print(f"Detected Empower 401k PDF format")
-        return load_portfolio_from_empower_pdf(pdf_path, portfolio_name)
+        gc.collect()
 
-    # Add other PDF format parsers here as needed
-    # elif detect_fidelity_pdf(pdf_path):
-    #     return load_portfolio_from_fidelity_pdf(pdf_path, portfolio_name)
+        if detect_acorns_pdf(pdf_path):
+            gc.collect()
+            print(f"Detected Acorns PDF format")
+            result = load_portfolio_from_acorns_pdf(pdf_path, portfolio_name)
+            gc.collect()
+            return result
 
-    print(f"Unknown PDF format: {pdf_path}")
-    return None
+        gc.collect()
+
+        if detect_arta_pdf(pdf_path):
+            gc.collect()
+            print(f"Detected Arta Finance PDF format")
+            result = load_portfolio_from_arta_pdf(pdf_path, portfolio_name)
+            gc.collect()
+            return result
+
+        gc.collect()
+
+        if detect_empower_pdf(pdf_path):
+            gc.collect()
+            print(f"Detected Empower 401k PDF format")
+            result = load_portfolio_from_empower_pdf(pdf_path, portfolio_name)
+            gc.collect()
+            return result
+
+        # Add other PDF format parsers here as needed
+        # elif detect_fidelity_pdf(pdf_path):
+        #     return load_portfolio_from_fidelity_pdf(pdf_path, portfolio_name)
+
+        print(f"Unknown PDF format: {pdf_path}")
+        return None
+
+    finally:
+        # Always force garbage collection after PDF processing
+        gc.collect()
