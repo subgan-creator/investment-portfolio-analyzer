@@ -5,6 +5,7 @@ Investment Portfolio Analyzer - Web Application
 import os
 import sys
 import uuid
+import gc
 from pathlib import Path
 from datetime import datetime
 
@@ -355,11 +356,13 @@ def select_accounts():
             if csv_portfolio:
                 portfolios.append(csv_portfolio)
 
-        # Load PDF files
+        # Load PDF files (with explicit garbage collection for memory efficiency)
         for pdf_file in pdf_files:
             pdf_portfolio = load_portfolio_from_pdf(pdf_file, "My Portfolio")
             if pdf_portfolio:
                 portfolios.append(pdf_portfolio)
+            # Free memory after each PDF to avoid OOM on limited memory servers
+            gc.collect()
 
         if not portfolios:
             flash('Could not parse the uploaded file(s). Please check the format.', 'error')
@@ -425,11 +428,13 @@ def analyze():
             if csv_portfolio:
                 portfolios.append(csv_portfolio)
 
-        # Load PDF files
+        # Load PDF files (with explicit garbage collection for memory efficiency)
         for pdf_file in pdf_files:
             pdf_portfolio = load_portfolio_from_pdf(pdf_file, "My Portfolio")
             if pdf_portfolio:
                 portfolios.append(pdf_portfolio)
+            # Free memory after each PDF to avoid OOM on limited memory servers
+            gc.collect()
 
         # Merge all portfolios if multiple
         if not portfolios:
