@@ -1,0 +1,25 @@
+Account Number,Account Name,Symbol,Description,Quantity,Last Price,Current Value,Cost Basis Total,Gain/Loss Dollar,Gain/Loss Percent,Type
+12345678,Vanguard Brokerage Account,VTI,Vanguard Total Stock Market ETF,150.000,$285.50,"$42,825.00","$35,000.00","$7,825.00",22.36%,ETF
+12345678,Vanguard Brokerage Account,VXUS,Vanguard Total Intl Stock ETF,200.000,$62.30,"$12,460.00","$11,500.00","$960.00",8.35%,ETF
+12345678,Vanguard Brokerage Account,BND,Vanguard Total Bond Market ETF,100.000,$72.15,"$7,215.00","$7,800.00","-$585.00",-7.50%,ETF
+12345678,Vanguard Brokerage Account,VNQ,Vanguard Real Estate ETF,50.000,$89.25,"$4,462.50","$4,200.00","$262.50",6.25%,ETF
+12345678,Vanguard Brokerage Account,AAPL,Apple Inc,25.000,$178.50,"$4,462.50","$3,500.00","$962.50",27.50%,Stock
+12345678,Vanguard Brokerage Account,MSFT,Microsoft Corporation,20.000,$425.00,"$8,500.00","$6,000.00","$2,500.00",41.67%,Stock
+12345678,Vanguard Brokerage Account,GOOGL,Alphabet Inc Class A,15.000,$175.25,"$2,628.75","$2,100.00","$528.75",25.18%,Stock
+12345678,Vanguard Brokerage Account,VMFXX,Vanguard Federal Money Market,5000.000,$1.00,"$5,000.00","$5,000.00","$0.00",0.00%,Money Market
+87654321,Vanguard Traditional IRA,VFIAX,Vanguard 500 Index Admiral,250.000,$485.00,"$121,250.00","$95,000.00","$26,250.00",27.63%,Mutual Fund
+87654321,Vanguard Traditional IRA,VBTLX,Vanguard Total Bond Mkt Idx Adm,500.000,$10.25,"$5,125.00","$5,500.00","-$375.00",-6.82%,Mutual Fund
+87654321,Vanguard Traditional IRA,VTIAX,Vanguard Total Intl Stk Idx Adm,300.000,$32.50,"$9,750.00","$8,500.00","$1,250.00",14.71%,Mutual Fund
+87654321,Vanguard Traditional IRA,VGSLX,Vanguard Real Estate Index Adm,100.000,$125.00,"$12,500.00","$11,000.00","$1,500.00",13.64%,Mutual Fund
+11223344,Vanguard Roth IRA,VGT,Vanguard Information Technology ETF,75.000,$565.00,"$42,375.00","$30,000.00","$12,375.00",41.25%,ETF
+11223344,Vanguard Roth IRA,VHT,Vanguard Health Care ETF,40.000,$265.00,"$10,600.00","$9,500.00","$1,100.00",11.58%,ETF
+11223344,Vanguard Roth IRA,VOO,Vanguard S&P 500 ETF,30.000,$520.00,"$15,600.00","$12,000.00","$3,600.00",30.00%,ETF
+11223344,Vanguard Roth IRA,VOOG,Vanguard S&P 500 Growth ETF,25.000,$345.00,"$8,625.00","$7,000.00","$1,625.00",23.21%,ETF
+55667788,529 Plan - Emma College Fund,VFTAX,Vanguard Target Retirement 2040,400.000,$42.50,"$17,000.00","$14,000.00","$3,000.00",21.43%,Target Date Fund
+55667788,529 Plan - Emma College Fund,VFORX,Vanguard Target Retirement 2045,300.000,$28.75,"$8,625.00","$7,500.00","$1,125.00",15.00%,Target Date Fund
+55667799,529 Plan - Lucas College Fund,VFIFX,Vanguard Target Retirement 2050,250.000,$52.00,"$13,000.00","$10,000.00","$3,000.00",30.00%,Target Date Fund
+99887766,Vanguard Personal Advisor Services,VTI,Vanguard Total Stock Market ETF,100.000,$285.50,"$28,550.00","$25,000.00","$3,550.00",14.20%,ETF
+99887766,Vanguard Personal Advisor Services,VXUS,Vanguard Total Intl Stock ETF,150.000,$62.30,"$9,345.00","$8,500.00","$845.00",9.94%,ETF
+99887766,Vanguard Personal Advisor Services,BND,Vanguard Total Bond Market ETF,200.000,$72.15,"$14,430.00","$15,000.00","-$570.00",-3.80%,ETF
+99887766,Vanguard Personal Advisor Services,BNDX,Vanguard Total Intl Bond ETF,100.000,$50.25,"$5,025.00","$5,200.00","-$175.00",-3.37%,ETF
+99887766,Vanguard Personal Advisor Services,VNQ,Vanguard Real Estate ETF,30.000,$89.25,"$2,677.50","$2,500.00","$177.50",7.10%,ETF

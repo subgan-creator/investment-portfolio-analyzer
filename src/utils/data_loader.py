@@ -136,6 +136,10 @@ def determine_tax_status(account_name: str) -> str:
     if '457' in name_lower:
         return 'tax_deferred'
 
+    # 529 Education Savings Plans - tax-advantaged (grows tax-free for education)
+    if '529' in name_lower or 'college fund' in name_lower or 'education' in name_lower:
+        return 'tax_deferred'
+
     # Custodial accounts (UGMA/UTMA) are taxable
     # Target date funds in custodial accounts are typically taxable
 
