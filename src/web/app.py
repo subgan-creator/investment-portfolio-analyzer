@@ -287,6 +287,28 @@ def index():
     return render_template('index.html')
 
 
+@app.route('/try-demo')
+def try_demo():
+    """Load sample Vanguard statement for demo purposes"""
+    import shutil
+
+    # Path to sample file
+    sample_file = Path(__file__).parent.parent.parent / 'data' / 'samples' / 'Sample_Vanguard_Statement.csv'
+
+    if not sample_file.exists():
+        flash('Demo file not found. Please upload your own statements.', 'error')
+        return redirect(url_for('index'))
+
+    # Copy sample to uploads folder with timestamp
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    dest_filename = f"{timestamp}_Sample_Vanguard_Statement.csv"
+    dest_path = os.path.join(app.config['UPLOAD_FOLDER'], dest_filename)
+    shutil.copy(sample_file, dest_path)
+
+    # Redirect to select_accounts with the demo file
+    return redirect(url_for('select_accounts') + f'?file={dest_filename}')
+
+
 @app.route('/upload', methods=['POST'])
 def upload_files():
     """Handle file upload and redirect to analysis"""
