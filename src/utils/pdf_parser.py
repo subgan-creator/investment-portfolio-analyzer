@@ -1501,6 +1501,662 @@ def load_portfolio_from_empower_pdf(pdf_path: str, portfolio_name: str = "Empowe
         return None
 
 
+# ============================================
+# FIDELITY PDF PARSER
+# ============================================
+
+def detect_fidelity_pdf(pdf_path: str) -> bool:
+    """
+    Check if a PDF is a Fidelity Investment Report.
+    Fidelity PDFs contain "INVESTMENT REPORT" and "Fidelity" on the first page.
+    """
+    if not PDF_SUPPORT:
+        return False
+
+    try:
+        with pdfplumber.open(pdf_path) as pdf:
+            if len(pdf.pages) > 0:
+                first_page = pdf.pages[0].extract_text() or ''
+                # Check for Fidelity markers
+                has_investment_report = 'INVESTMENT REPORT' in first_page
+                has_fidelity = 'Fidelity' in first_page or 'fidelity.com' in first_page.lower()
+                return has_investment_report and has_fidelity
+    except Exception:
+        pass
+    return False
+
+
+def parse_fidelity_holding_line(line: str) -> Optional[Dict]:
+    """
+    Parse a Fidelity holdings line.
+    Format: DESCRIPTION (TICKER) begin_value quantity price end_value cost_basis gain_loss income
+
+    Examples:
+    NVIDIA CORPORATION COM (NVDA) $45,871.20 240.000 $177.1900 $42,525.60 $2,554.21 $39,971.39 $9.60
+    NH PORTFOLIO 2030 (FIDELITY FUNDS) 100% $14,814.79 483.715 $31.9300 $15,445.02
+    """
+    # Skip header lines, total lines, and non-holding lines
+    skip_patterns = [
+        'Beginning', 'Market Value', 'Description', 'Total', 'Account #',
+        'INVESTMENT REPORT', 'Holdings', 'Page', 'Core Account', 'Mutual Funds',
+        'Exchange Traded', 'Stocks', 'Common Stock', 'Equity ETPs', 'Stock Funds',
+        'EAI', 'Estimated', 'All positions', 'Includes exchange', 'of account',
+        '% of account', 'Please note', 'Unrealized', 'Per Unit', 'Gain/Loss',
+        '(continued)', 'account holdings', 'Feb 1', 'Feb 28', 'Cost Basis',
+        'Brokerage services', 'Member NYSE', 'day yield', 'not applicable'
+    ]
+
+    for pattern in skip_patterns:
+        if pattern in line:
+            return None
+
+    # Try to find ticker in parentheses - must be 2-5 uppercase letters
+    ticker_match = re.search(r'\(([A-Z]{2,5})\)', line)
+    if not ticker_match:
+        return None
+
+    ticker = ticker_match.group(1)
+
+    # Skip if ticker looks like a date or code
+    if ticker in ['SIPC', 'NFS', 'FBS', 'NYSE', 'ETF', 'ETN', 'MKT', 'COM', 'INC', 'CORP', 'DEL', 'CL']:
+        return None
+
+    # Extract description (everything before the ticker)
+    description = line[:ticker_match.start()].strip()
+    if not description or len(description) < 3:
+        return None
+
+    # Extract the part after ticker - this contains the numbers
+    after_ticker = line[ticker_match.end():]
+
+    # Fidelity format: begin_value quantity price end_value cost_basis gain_loss [income]
+    # Pattern to match: $45,871.20 240.000 $177.1900 $42,525.60 $2,554.21 $39,971.39 $9.60
+    # We need: quantity (no $), price ($xxx.xxxx), end_value ($xx,xxx.xx)
+
+    # Find all numeric values with their position
+    # Dollar amounts: $123,456.78 or -$123.45
+    # Plain numbers: 240.000 (quantity usually 3 decimal places)
+
+    dollar_pattern = r'-?\$[\d,]+\.?\d*'
+    quantity_pattern = r'(?<!\$)\b\d+\.\d{3}\b'  # Number with exactly 3 decimal places, not preceded by $
+
+    # Find quantity (no $ sign, has .XXX format)
+    qty_match = re.search(quantity_pattern, after_ticker)
+    if not qty_match:
+        # Try to find any reasonable number that could be quantity
+        qty_match = re.search(r'(?<!\$)\b(\d+\.\d+)\b', after_ticker)
+        if not qty_match:
+            return None
+
+    quantity = float(qty_match.group().replace(',', ''))
+
+    # Find all dollar amounts
+    dollar_amounts = re.findall(dollar_pattern, after_ticker)
+    clean_dollars = []
+    for d in dollar_amounts:
+        val = d.replace('$', '').replace(',', '').strip()
+        if val and val != '-':
+            try:
+                clean_dollars.append(float(val))
+            except ValueError:
+                pass
+
+    # We need at least begin_value and price (which comes after quantity)
+    # Format: begin_value [%] quantity price end_value cost_basis gain_loss
+    if len(clean_dollars) < 2:
+        return None
+
+    # Price is the dollar amount that appears AFTER the quantity in the string
+    qty_pos = qty_match.end()
+    after_qty = after_ticker[qty_pos:]
+
+    price_match = re.search(dollar_pattern, after_qty)
+    if not price_match:
+        return None
+
+    price = float(price_match.group().replace('$', '').replace(',', ''))
+
+    # End value is the next dollar amount after price
+    after_price = after_qty[price_match.end():]
+    end_value_match = re.search(dollar_pattern, after_price)
+    if end_value_match:
+        end_value = float(end_value_match.group().replace('$', '').replace(',', ''))
+    else:
+        end_value = quantity * price
+
+    # Cost basis is the next dollar amount
+    cost_basis = end_value
+    if end_value_match:
+        after_end = after_price[end_value_match.end():]
+        cost_match = re.search(dollar_pattern, after_end)
+        if cost_match:
+            cost_basis = float(cost_match.group().replace('$', '').replace(',', ''))
+
+    # Sanity check: calculated value should be close to end_value
+    calc_value = quantity * price
+    if end_value > 0 and abs(calc_value - end_value) / end_value > 0.1:
+        # Values don't match - might be parsing error
+        # Use calculated value
+        end_value = calc_value
+
+    return {
+        'ticker': ticker,
+        'description': description,
+        'shares': quantity,
+        'price': price,
+        'value': end_value,
+        'cost_basis': cost_basis
+    }
+
+
+def load_portfolio_from_fidelity_pdf(pdf_path: str, portfolio_name: str = "Fidelity Portfolio") -> Optional[Portfolio]:
+    """
+    Load portfolio from a Fidelity Investment Report PDF.
+
+    Supports:
+    - Brokerage accounts (stocks, ETFs, mutual funds)
+    - 529 Education accounts
+    - IRA accounts
+
+    LEARNING: Fidelity holdings can span multiple lines:
+    - Single line: APPLE INC (AAPL) $2,386.43 9.197 $264.1800 ...
+    - Multi-line: J P MORGAN EXCHANGE TRADED FD 2,808.12 47.251 58.0400 ...
+                  NASDAQ EQT 10.580
+                  PREM (JEPQ)
+    The ticker in parentheses may appear on a later line.
+
+    For 529 accounts:
+    - Holdings format: NH PORTFOLIO 2030 (FIDELITY FUNDS) 100% $14,814.79 483.715 $31.9300 $15,445.02
+    - No ticker symbol, use fund name as ticker
+
+    Args:
+        pdf_path: Path to the Fidelity PDF statement
+        portfolio_name: Name for the portfolio
+
+    Returns:
+        Portfolio object or None if parsing fails
+    """
+    if not PDF_SUPPORT:
+        print("PDF support not available. Install pdfplumber: pip install pdfplumber")
+        return None
+
+    portfolio = Portfolio(portfolio_name=portfolio_name)
+    accounts_dict: Dict[str, Account] = {}
+
+    try:
+        with pdfplumber.open(pdf_path) as pdf:
+            current_account_id = None
+            current_account_name = None
+            current_tax_status = 'taxable'
+            is_529_account = False
+
+            for page_num, page in enumerate(pdf.pages):
+                text = page.extract_text() or ''
+                lines = text.split('\n')
+
+                # Detect account headers first
+                for line in lines:
+                    line_clean = line.strip()
+
+                    # Format: "Account # X66-769380" or "Account # 618-731045"
+                    # Must have # to be a valid account line (excludes "Account Value", "Account Type")
+                    account_match = re.search(r'Account #\s*([A-Z0-9-]+)', line_clean)
+                    if account_match:
+                        new_account_id = account_match.group(1)
+                        # Only update if different account and looks like valid ID
+                        if new_account_id != current_account_id and len(new_account_id) > 3:
+                            current_account_id = new_account_id
+                            # Reset account name when new account detected
+                            if is_529_account:
+                                current_account_name = 'Fidelity 529'
+
+                    # Detect account type from headers
+                    if 'FIDELITY ACCOUNT' in line_clean or 'JOINT TIC' in line_clean:
+                        current_account_name = 'Fidelity Brokerage'
+                        current_tax_status = 'taxable'
+                        is_529_account = False
+                    elif 'BENEFICIARY (529)' in line_clean:
+                        # 529 account with beneficiary name
+                        current_tax_status = 'tax_deferred'
+                        is_529_account = True
+                        # Extract beneficiary name: "Namasya Subramanian - BENEFICIARY (529)"
+                        ben_match = re.search(r'^([A-Za-z]+\s+[A-Za-z]+)\s*-\s*BENEFICIARY', line_clean)
+                        if ben_match:
+                            current_account_name = f"529 - {ben_match.group(1).title()}"
+                        else:
+                            current_account_name = 'Fidelity 529'
+                    elif 'EDUCATION ACCOUNT' in line_clean:
+                        current_account_name = 'Fidelity 529'
+                        current_tax_status = 'tax_deferred'
+                        is_529_account = True
+                    elif 'NH UNIQUE' in line_clean:
+                        is_529_account = True
+                    elif 'TRADITIONAL IRA' in line_clean:
+                        current_account_name = 'Fidelity Traditional IRA'
+                        current_tax_status = 'tax_deferred'
+                        is_529_account = False
+                    elif 'ROTH IRA' in line_clean:
+                        current_account_name = 'Fidelity Roth IRA'
+                        current_tax_status = 'tax_free'
+                        is_529_account = False
+                    elif 'ROLLOVER IRA' in line_clean:
+                        current_account_name = 'Fidelity Rollover IRA'
+                        current_tax_status = 'tax_deferred'
+                        is_529_account = False
+
+                # Parse holdings - use different parser for 529 accounts
+                if is_529_account:
+                    holdings = parse_fidelity_529_holdings(text)
+                else:
+                    holdings = parse_fidelity_holdings_from_page(text)
+
+                for holding in holdings:
+                    if not current_account_id:
+                        continue
+
+                    # Create account if doesn't exist
+                    if current_account_id not in accounts_dict:
+                        account = Account(
+                            account_id=current_account_id,
+                            account_name=current_account_name or 'Fidelity Account',
+                            account_type=current_account_name or 'Brokerage',
+                            tax_status=current_tax_status,
+                        )
+                        accounts_dict[current_account_id] = account
+
+                    account = accounts_dict[current_account_id]
+
+                    # Classify ticker
+                    ticker = holding['ticker']
+                    asset_class, sector = classify_fidelity_ticker(ticker, holding['description'])
+
+                    # Create holding
+                    new_holding = Holding(
+                        ticker=ticker,
+                        shares=holding['shares'],
+                        cost_basis_per_share=holding['cost_basis'] / holding['shares'] if holding['shares'] > 0 else holding['price'],
+                        purchase_date=datetime(2024, 1, 1),
+                        current_price=holding['price'],
+                        asset_class=asset_class,
+                        sector=sector,
+                        description=holding['description'],
+                    )
+
+                    # Avoid duplicates
+                    existing_tickers = [h.ticker for h in account.holdings]
+                    if ticker not in existing_tickers:
+                        account.add_holding(new_holding)
+
+                # GC every 5 pages
+                if page_num > 0 and page_num % 5 == 0:
+                    gc.collect()
+
+        # Add accounts to portfolio
+        for account in accounts_dict.values():
+            if account.holdings:
+                portfolio.add_account(account)
+
+        return portfolio
+
+    except Exception as e:
+        print(f"Error parsing Fidelity PDF: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+
+def parse_fidelity_529_holdings(page_text: str) -> List[Dict]:
+    """
+    Parse holdings from a Fidelity 529 account page.
+
+    Formats:
+    - NH PORTFOLIO 2030 (FIDELITY FUNDS) 100% $14,814.79 483.715 $31.9300 $15,445.02
+    - NH PORTFOLIO 2036 (FIDELITY BLEND) 100% $15,734.41 844.332 $19.3800 $16,363.15
+    Pattern: Description (FIDELITY FUNDS/BLEND) Percent BeginValue Quantity Price EndValue
+
+    Returns:
+        List of holding dicts
+    """
+    holdings = []
+    lines = page_text.split('\n')
+
+    for line in lines:
+        line = line.strip()
+
+        # Look for NH PORTFOLIO lines - these are 529 target date funds
+        # Support both FIDELITY FUNDS and FIDELITY BLEND variants
+        if 'NH PORTFOLIO' in line and ('FIDELITY FUNDS' in line or 'FIDELITY BLEND' in line):
+            # Extract fund name (e.g., "NH PORTFOLIO 2030" or "NH PORTFOLIO 2036")
+            fund_match = re.search(r'(NH PORTFOLIO \d+)', line)
+            if not fund_match:
+                continue
+
+            fund_name = fund_match.group(1)
+
+            # Create ticker from fund name (e.g., "NH2030")
+            year_match = re.search(r'\d+', fund_name)
+            ticker = f"NH{year_match.group()}" if year_match else "NH529"
+
+            # Extract numbers: look for pattern Percent BeginValue Quantity Price EndValue
+            # Pattern: 100% $14,814.79 483.715 $31.9300 $15,445.02
+            numbers = re.findall(r'\$?([\d,]+\.\d+)', line)
+            if len(numbers) < 4:
+                continue
+
+            try:
+                # Numbers are: begin_value, quantity, price, end_value
+                quantity = float(numbers[1].replace(',', ''))  # 483.715
+                price = float(numbers[2].replace(',', ''))     # 31.9300
+                end_value = float(numbers[3].replace(',', '')) # 15,445.02
+
+                # Verify calculation
+                calc_value = quantity * price
+                if abs(calc_value - end_value) > end_value * 0.05:
+                    # Values don't match, skip
+                    continue
+
+                holdings.append({
+                    'ticker': ticker,
+                    'description': fund_name,
+                    'shares': quantity,
+                    'price': price,
+                    'value': end_value,
+                    'cost_basis': end_value  # No cost basis in 529 statements
+                })
+            except (ValueError, IndexError):
+                continue
+
+    return holdings
+
+
+def parse_fidelity_holdings_from_page(page_text: str) -> List[Dict]:
+    """
+    Parse holdings from a Fidelity page.
+
+    LEARNING: Fidelity has two formats:
+    1. Stocks (single line): DESCRIPTION (TICKER) $begin qty $price $end ...
+       Example: APPLE INC (AAPL) $2,386.43 9.197 $264.1800 $2,429.66 ...
+    2. ETFs (multi-line): DESCRIPTION begin qty price end ... then more lines with (TICKER)
+       Example: J P MORGAN EXCHANGE TRADED FD 2,808.12 47.251 58.0400 ...
+                NASDAQ EQT 10.580
+                PREM (JEPQ)
+
+    Note: Stocks have $ before begin value, ETFs don't always have $
+
+    Args:
+        page_text: Full text of one PDF page
+
+    Returns:
+        List of holding dicts with ticker, shares, price, value, cost_basis
+    """
+    holdings = []
+    lines = page_text.split('\n')
+
+    # Skip patterns - lines containing these are headers/footers
+    skip_patterns = [
+        'Beginning', 'Market Value', 'Description', 'Account #',
+        'INVESTMENT REPORT', 'Page', 'Feb 1', 'Feb 28',
+        'Brokerage services', 'Member NYSE', 'EAI', 'Estimated',
+        'Cost Basis', 'Per Unit', 'Gain/Loss', '% of account',
+        'of account holdings', 'continued', 'GANAPATHI', 'JOINT TIC',
+        'Equity ETPs', 'Common Stock', 'Exchange Traded', 'Stocks',
+        'Mutual Funds', 'Stock Funds', 'Core Account', 'Holdings',
+        'FIDELITY ACCOUNT', 'EDUCATION'
+    ]
+
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+
+        # Skip empty or header/footer lines
+        if not line or line.startswith('Total') or any(skip in line for skip in skip_patterns):
+            i += 1
+            continue
+
+        # Skip page numbers like "4 of 10"
+        if re.match(r'^\d+ of \d+$', line):
+            i += 1
+            continue
+
+        # Look for holding patterns - need either:
+        # 1. Ticker on this line with $ values: DESC (TICKER) $val qty $price ...
+        # 2. Data line with numbers, ticker on later line
+
+        # Check for ticker on this line
+        ticker_match = re.search(r'\(([A-Z]{2,5})\)', line)
+
+        if ticker_match:
+            ticker = ticker_match.group(1)
+
+            # Skip invalid tickers
+            if ticker in ['SIPC', 'NFS', 'FBS', 'NYSE', 'ETN', 'MKT']:
+                i += 1
+                continue
+
+            # This is a single-line holding (stocks format)
+            # Format: DESCRIPTION (TICKER) $begin qty $price $end $cost $gain ...
+            # Extract values after ticker
+            after_ticker = line[ticker_match.end():]
+
+            # Find quantity (3 decimal places, no $)
+            qty_match = re.search(r'(?<!\$)\b(\d+\.\d{3})\b', after_ticker)
+            if not qty_match:
+                # Try 2 decimal places
+                qty_match = re.search(r'(?<!\$)\b(\d+\.\d{2})\b', after_ticker)
+            if not qty_match:
+                i += 1
+                continue
+
+            quantity = float(qty_match.group(1))
+
+            # Find price (usually 4 decimal places with $)
+            price_match = re.search(r'\$?([\d,]+\.\d{4})', after_ticker)
+            if not price_match:
+                # Try 2 decimal places
+                price_match = re.search(r'\$?([\d,]+\.\d{2})', after_ticker[qty_match.end():])
+            if not price_match:
+                i += 1
+                continue
+
+            price = float(price_match.group(1).replace(',', ''))
+
+            # Calculate value
+            end_value = quantity * price
+
+            # Get cost basis - usually the 4th or 5th number after ticker
+            dollar_amounts = re.findall(r'\$?([\d,]+\.\d{2})', after_ticker)
+            cost_basis = end_value
+            if len(dollar_amounts) >= 4:
+                try:
+                    cost_basis = float(dollar_amounts[3].replace(',', ''))
+                except:
+                    pass
+
+            # Description is before ticker
+            description = line[:ticker_match.start()].strip()
+
+            holdings.append({
+                'ticker': ticker,
+                'description': description,
+                'shares': quantity,
+                'price': price,
+                'value': end_value,
+                'cost_basis': cost_basis
+            })
+            i += 1
+
+        else:
+            # No ticker on this line - check if it's a multi-line ETF entry
+            # ETF format: DESC begin qty price end cost gain income
+            #             continuation
+            #             more (TICKER)
+
+            # Must have multiple numbers to be a data line
+            numbers = re.findall(r'[\d,]+\.\d+', line)
+            if len(numbers) < 4:
+                i += 1
+                continue
+
+            # Check next 3 lines for ticker
+            ticker = None
+            ticker_offset = 0
+            for j in range(1, 4):
+                if i + j >= len(lines):
+                    break
+                next_line = lines[i + j].strip()
+                next_ticker_match = re.search(r'\(([A-Z]{2,5})\)', next_line)
+                if next_ticker_match:
+                    ticker = next_ticker_match.group(1)
+                    ticker_offset = j
+                    break
+
+            if not ticker or ticker in ['SIPC', 'NFS', 'FBS', 'NYSE', 'ETN', 'MKT']:
+                i += 1
+                continue
+
+            # Parse the data line
+            # Format: DESC begin qty price end cost gain [income]
+            # Numbers in order: begin(skip), qty, price, end(skip), cost, gain, [income]
+
+            # Find quantity (usually 3 decimal places)
+            qty_match = re.search(r'(?<!\d)([\d,]+\.\d{3})(?!\d)', line)
+            if not qty_match:
+                i += 1
+                continue
+
+            quantity = float(qty_match.group(1).replace(',', ''))
+
+            # Find price (4 decimal places, right after quantity)
+            qty_end = qty_match.end()
+            after_qty = line[qty_end:]
+            price_match = re.search(r'([\d,]+\.\d{4})', after_qty)
+            if not price_match:
+                # Try 2 decimal places
+                price_match = re.search(r'([\d,]+\.\d{2})', after_qty)
+            if not price_match:
+                i += 1
+                continue
+
+            price = float(price_match.group(1).replace(',', ''))
+
+            # End value is the next number after price
+            end_value = quantity * price
+            price_end = qty_end + price_match.end()
+            after_price = line[price_end:]
+            end_match = re.search(r'([\d,]+\.\d{2})', after_price)
+            if end_match:
+                end_value = float(end_match.group(1).replace(',', ''))
+
+            # Cost basis is the next number
+            cost_basis = end_value
+            if end_match:
+                after_end = after_price[end_match.end():]
+                cost_match = re.search(r'([\d,]+\.\d{2})', after_end)
+                if cost_match:
+                    cost_basis = float(cost_match.group(1).replace(',', ''))
+
+            # Build description from current line + continuation lines
+            # Description is text before the first number
+            first_num = re.search(r'[\d,]+\.\d', line)
+            desc_parts = []
+            if first_num:
+                desc_parts.append(line[:first_num.start()].strip())
+
+            # Add continuation lines (before ticker line)
+            for j in range(1, ticker_offset + 1):
+                if i + j < len(lines):
+                    cont_line = lines[i + j].strip()
+                    # Remove ticker from ticker line
+                    cont_line = re.sub(r'\([A-Z]{2,5}\)', '', cont_line)
+                    # Remove numbers
+                    cont_line = re.sub(r'[\d,]+\.\d+', '', cont_line).strip()
+                    if cont_line:
+                        desc_parts.append(cont_line)
+
+            description = ' '.join(desc_parts)
+            description = re.sub(r'\s+', ' ', description).strip()
+
+            holdings.append({
+                'ticker': ticker,
+                'description': description,
+                'shares': quantity,
+                'price': price,
+                'value': end_value,
+                'cost_basis': cost_basis
+            })
+
+            # Skip past processed lines
+            i += ticker_offset + 1
+
+    return holdings
+
+
+def classify_fidelity_ticker(ticker: str, description: str = "") -> Tuple[str, str]:
+    """Classify Fidelity holdings by ticker and description."""
+    desc_lower = description.lower()
+    ticker_upper = ticker.upper()
+
+    # 529 Portfolio funds
+    if 'NH PORTFOLIO' in description or '529' in description or 'PORTFOLIO 20' in description:
+        return ('Target Date Fund', 'Education Savings')
+
+    # Money market
+    if 'MONEY MARKET' in description or ticker in ['FZFXX', 'SPAXX', 'FDRXX']:
+        return ('Cash', 'Money Market')
+
+    # Fidelity mutual funds
+    fidelity_funds = {
+        'FXAIX': ('Mutual Fund', 'US Large Cap'),
+        'FSRPX': ('Mutual Fund', 'Consumer'),
+        'MIOPX': ('Mutual Fund', 'International'),
+        'FSKAX': ('Mutual Fund', 'US Total Market'),
+        'FTBFX': ('Mutual Fund', 'Fixed Income'),
+    }
+    if ticker in fidelity_funds:
+        return fidelity_funds[ticker]
+
+    # ETFs
+    etfs = {
+        'PAVE': ('ETF', 'Infrastructure'),
+        'IEFA': ('ETF', 'International Developed'),
+        'JEPQ': ('ETF', 'Technology'),
+        'VWO': ('ETF', 'Emerging Markets'),
+        'VOO': ('ETF', 'US Large Cap'),
+        'VTI': ('ETF', 'US Total Market'),
+    }
+    if ticker in etfs:
+        return etfs[ticker]
+
+    # Stocks by sector
+    tech_stocks = ['NVDA', 'AAPL', 'MSFT', 'AMD', 'AVGO', 'MRVL', 'SMCI', 'GOOGL', 'GOOG']
+    if ticker in tech_stocks:
+        return ('Stock', 'Technology')
+
+    finance_stocks = ['JPM', 'BAC', 'IBKR', 'HOOD', 'V', 'MA']
+    if ticker in finance_stocks:
+        return ('Stock', 'Financials')
+
+    consumer_stocks = ['AMZN', 'TSLA', 'UBER']
+    if ticker in consumer_stocks:
+        return ('Stock', 'Consumer')
+
+    industrial_stocks = ['DE', 'CAT', 'HON']
+    if ticker in industrial_stocks:
+        return ('Stock', 'Industrial')
+
+    healthcare_stocks = ['JNJ', 'PFE', 'UNH', 'ABBV']
+    if ticker in healthcare_stocks:
+        return ('Stock', 'Healthcare')
+
+    # Default based on description
+    if 'ETF' in description or 'FUND' in description:
+        return ('ETF', 'Diversified')
+    if 'COM' in description or 'INC' in description or 'CORP' in description:
+        return ('Stock', 'Other')
+
+    return ('Other', 'Other')
+
+
 def load_portfolio_from_pdf(pdf_path: str, portfolio_name: str = "My Portfolio") -> Optional[Portfolio]:
     """
     Load portfolio from a PDF file.
@@ -1571,9 +2227,14 @@ def load_portfolio_from_pdf(pdf_path: str, portfolio_name: str = "My Portfolio")
             gc.collect()
             return result
 
-        # Add other PDF format parsers here as needed
-        # elif detect_fidelity_pdf(pdf_path):
-        #     return load_portfolio_from_fidelity_pdf(pdf_path, portfolio_name)
+        gc.collect()
+
+        if detect_fidelity_pdf(pdf_path):
+            gc.collect()
+            print(f"Detected Fidelity Investment Report PDF format")
+            result = load_portfolio_from_fidelity_pdf(pdf_path, portfolio_name)
+            gc.collect()
+            return result
 
         print(f"Unknown PDF format: {pdf_path}")
         return None
