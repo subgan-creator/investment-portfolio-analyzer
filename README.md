@@ -1,7 +1,7 @@
 # Investment Portfolio Analyzer
 
 A comprehensive tool for individual investors to analyze and optimize their investment portfolios across multiple accounts without requiring a financial advisor. 
-Vision is to enable individual investors be informed about their investments, risks, concentration, macro trends and use AI to provide insigths and guidance so the investor can be well informed. Another aspect is to enable investors to be matched with accrediated investment professional, tax advisor and other financial specialist, the benefit for these professionals is that the client portfolio data is accessible and structured format.
+Vision is to enable individual investors be informed about their investments, risks, concentration, macro trends and use AI to provide insigths and guidance so the investor can be well informed. Another aspect is to enable investors be prepared for their engagement with their investment professional, tax advisor and other financial specialist. The availability of data and structured insights will enable investors to have meanhigful goal based conversations with advisors and other professionals.
 
 ## Features
 
@@ -16,6 +16,7 @@ Vision is to enable individual investors be informed about their investments, ri
 - **Visualization Dashboard**: Interactive charts and reports for portfolio insights
 - - 🤖 **AI Investment Advisor**: "Claude-sonnet-4-20250514" powered chat widget that analyzes 
   your portfolio and provides personalized insights and guidance.
+- **Fund Plan insights** Get better insights about target date fund allocation by uploading fund plan documents.
 
 
 ## Installation
