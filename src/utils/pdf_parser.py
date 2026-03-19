@@ -401,18 +401,13 @@ def load_portfolio_from_betterment_pdf(pdf_path: str, portfolio_name: str = "Bet
                         holdings = parse_betterment_continuation_page(text, current_account.account_name)
                         all_holdings.extend(holdings)
 
-                # Also try table extraction as fallback
-                tables = page.extract_tables()
-                for table in tables:
-                    if not table or len(table) < 2:
-                        continue
+                # NOTE: Removed table extraction fallback - it's very slow and memory-intensive
+                # for large PDFs (37+ pages), causing timeouts on limited-memory servers.
+                # Text extraction above handles holdings parsing effectively.
 
-                    # Check if this is a holdings table
-                    header_text = ' '.join(str(c) for c in table[0] if c).lower()
-                    if 'ticker' in header_text and ('shares' in header_text or 'value' in header_text):
-                        account_name = current_account.account_name if current_account else 'Unknown'
-                        holdings = parse_betterment_holdings_table(table, account_name)
-                        all_holdings.extend(holdings)
+                # Free memory periodically (every 10 pages) for large PDFs
+                if page_num > 0 and page_num % 10 == 0:
+                    gc.collect()
 
         # Now create holdings from parsed data
         # Group by account and add to portfolio
