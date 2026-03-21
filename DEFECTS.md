@@ -165,6 +165,82 @@ else:
 
 ---
 
+### DEF-003: False Concentration Warnings for Target Date Funds and Cash
+
+**Date Found:** March 21, 2026
+**Severity:** Medium
+**Status:** Resolved
+
+**Symptoms:**
+- Target date funds (e.g., "TARGETDAT 22.2%") flagged as concentration risk
+- Cash/money market positions (e.g., "CASH 18.1%") flagged as concentration risk
+- S&P 500 index funds (e.g., VFIAX) flagged as concentration risk
+- Sector ETFs (e.g., VGT) flagged at even moderate percentages
+
+**Root Cause:**
+The concentration analyzer treated all positions equally, regardless of their inherent diversification. It only checked if a position exceeded 10% of the portfolio, without considering:
+- Target date funds contain hundreds of underlying securities (stocks, bonds, international)
+- Total market/S&P 500 funds hold 500-3000+ securities
+- Cash is inherently low-risk and not a concentration concern
+- Sector ETFs hold 100+ stocks within their sector
+
+**Fix Applied:**
+1. Added `is_diversified_position()` function to detect inherently diversified holdings
+2. Created `DIVERSIFIED_TICKERS` set with 60+ known diversified funds:
+   - Total market ETFs (VTI, ITOT, VTSAX)
+   - S&P 500 funds (VOO, SPY, VFIAX, FXAIX)
+   - Bond funds (BND, AGG, VBTLX)
+   - International funds (VXUS, IEFA, VWO)
+   - Sector ETFs (VGT, VHT, VNQ)
+   - Money market (VMFXX, SPAXX, FZFXX)
+3. Added `DIVERSIFIED_KEYWORDS` list to match by description:
+   - "target date", "target retirement"
+   - "total market", "s&p 500"
+   - "money market", "cash"
+   - Target date years (2025, 2030, 2035, etc.)
+4. Modified `identify_concentrated_positions()` to skip diversified positions
+5. Updated Portfolio model to include `description` in consolidated positions
+
+**Files Changed:**
+- `src/portfolio_analyzer/concentration.py` - Major refactor with diversification detection
+- `src/models/portfolio.py` - Added `description` field to positions
+
+**Verification:**
+```bash
+python3 -c "
+from src.utils.data_loader import load_portfolio_from_csv
+from src.portfolio_analyzer.concentration import ConcentrationRiskAnalyzer, is_diversified_position
+
+# Test detection function
+print('=== Testing is_diversified_position() ===')
+test_cases = [
+    ('VFIAX', 'Fund', 'US Large Cap', '500 Index Fund'),  # Should SKIP
+    ('CASH', 'Cash', 'Money Market', 'Cash'),             # Should SKIP
+    ('NH2030', 'Target Date Fund', 'Education', 'NH PORTFOLIO 2030'),  # Should SKIP
+    ('NVDA', 'Stock', 'Technology', 'NVIDIA Corporation'),  # Should CHECK
+]
+for ticker, ac, sector, desc in test_cases:
+    result = is_diversified_position(ticker, ac, sector, desc)
+    print(f'  {ticker}: {\"SKIP\" if result else \"CHECK\"}')
+"
+```
+
+**Expected Results:**
+| Position Type | Before Fix | After Fix |
+|--------------|------------|-----------|
+| Target Date Fund 22% | HIGH WARNING | Not flagged (diversified) |
+| Cash 18% | HIGH WARNING | Not flagged (low risk) |
+| VFIAX 29% | HIGH WARNING | Not flagged (500+ stocks) |
+| NVDA 35% | HIGH WARNING | HIGH WARNING (single stock) |
+| JPM 12% | MODERATE WARNING | MODERATE WARNING (single stock) |
+
+**Prevention:**
+- Concentration analysis should consider the nature of holdings
+- Index funds and target date funds are designed for diversification
+- Single stock positions are the real concentration risk
+
+---
+
 ## Open Defects
 
 *None currently tracked*
