@@ -64,7 +64,8 @@ class Portfolio:
                 'percentage_of_portfolio': (total_value / self.total_value * 100) if self.total_value > 0 else 0,
                 'holdings_count': len(holdings),
                 'asset_class': holdings[0].asset_class if holdings else "Unknown",
-                'sector': holdings[0].sector if holdings else "Unknown"
+                'sector': holdings[0].sector if holdings else "Unknown",
+                'description': holdings[0].description if holdings else ""
             }
         
         return positions
