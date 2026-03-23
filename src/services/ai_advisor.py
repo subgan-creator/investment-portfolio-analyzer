@@ -157,19 +157,41 @@ ANALYSIS SCORES:
             AI response string
         """
         try:
+            # Validate messages - Anthropic requires at least one message
+            if not messages:
+                return "Please enter a message to get started."
+
+            # Ensure messages have valid format
+            valid_messages = []
+            for msg in messages:
+                if msg.get('role') in ['user', 'assistant'] and msg.get('content'):
+                    valid_messages.append({
+                        'role': msg['role'],
+                        'content': str(msg['content'])
+                    })
+
+            if not valid_messages:
+                return "Please enter a message to get started."
+
             # Anthropic API requires system prompt as separate parameter
             # and messages should only contain user/assistant roles
             response = self.client.messages.create(
                 model=self.model,
                 system=self.build_system_prompt(),
-                messages=messages,
+                messages=valid_messages,
                 max_tokens=1024,
             )
+
+            # Handle empty response
+            if not response.content:
+                print(f"[AI Advisor] Empty response. Stop reason: {response.stop_reason}")
+                return "I wasn't able to generate a response. Please try rephrasing your question."
 
             return response.content[0].text
 
         except Exception as e:
             error_msg = str(e)
+            print(f"[AI Advisor] Error: {error_msg}")
             if "api_key" in error_msg.lower() or "authentication" in error_msg.lower():
                 return "I'm unable to connect to the AI service. Please check that your Anthropic API key is configured correctly in the .env file."
             elif "rate_limit" in error_msg.lower():
@@ -290,10 +312,16 @@ Give me the recommendations like a financial advisor would in a portfolio review
                 max_tokens=1500,
             )
 
+            # Handle empty response
+            if not response.content:
+                print(f"[AI Advisor] Empty recommendations response. Stop reason: {response.stop_reason}")
+                return "I wasn't able to generate recommendations. Please try again."
+
             return response.content[0].text
 
         except Exception as e:
             error_msg = str(e)
+            print(f"[AI Advisor] Recommendations error: {error_msg}")
             if "api_key" in error_msg.lower() or "authentication" in error_msg.lower():
                 return "I'm unable to connect to the AI service. Please check that your Anthropic API key is configured correctly in the .env file."
             elif "rate_limit" in error_msg.lower():

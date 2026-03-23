@@ -262,15 +262,61 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
+/* Message footer with time and copy button */
+.chat-message-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 6px;
+    padding: 0 4px;
+}
+
+.chat-message.user .chat-message-footer {
+    justify-content: flex-end;
+}
+
 .chat-message-time {
     font-size: 0.7rem;
     color: #94a3b8;
-    margin-top: 4px;
-    padding: 0 4px;
 }
 
 .chat-message.user .chat-message-time {
     text-align: right;
+}
+
+/* Copy button */
+.chat-copy-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: transparent;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.chat-copy-btn:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #334155;
+}
+
+.chat-copy-btn.copied {
+    background: #ecfdf5;
+    border-color: #10b981;
+    color: #059669;
+}
+
+.chat-copy-btn svg {
+    flex-shrink: 0;
+}
+
+.chat-copy-btn .copy-text {
+    font-weight: 500;
 }
 
 /* Typing indicator */
@@ -442,4 +488,65 @@
 
 .chat-messages::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
+}
+
+/* Markdown formatting styles for AI responses */
+.chat-message.assistant .chat-message-content h3.md-h3 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 16px 0 8px 0;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.chat-message.assistant .chat-message-content h3.md-h3:first-child {
+    margin-top: 0;
+}
+
+.chat-message.assistant .chat-message-content h4.md-h4 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #334155;
+    margin: 12px 0 6px 0;
+}
+
+.chat-message.assistant .chat-message-content h4.md-h4:first-child {
+    margin-top: 0;
+}
+
+.chat-message.assistant .chat-message-content strong {
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.chat-message.assistant .chat-message-content em {
+    font-style: italic;
+}
+
+.chat-message.assistant .chat-message-content ol.md-list,
+.chat-message.assistant .chat-message-content ul.md-list {
+    margin: 8px 0;
+    padding-left: 20px;
+}
+
+.chat-message.assistant .chat-message-content ol.md-list {
+    list-style-type: decimal;
+}
+
+.chat-message.assistant .chat-message-content ul.md-list {
+    list-style-type: disc;
+}
+
+.chat-message.assistant .chat-message-content ol.md-list li,
+.chat-message.assistant .chat-message-content ul.md-list li {
+    margin: 4px 0;
+    line-height: 1.5;
+    padding-left: 4px;
+}
+
+/* Highlight important values */
+.chat-message.assistant .chat-message-content strong {
+    background: linear-gradient(to bottom, transparent 50%, rgba(37, 99, 235, 0.1) 50%);
+    padding: 0 2px;
 }

@@ -243,13 +243,158 @@ function appendMessage(role, content, time) {
 
     const messageDiv = document.createElement('div');
     messageDiv.className = `chat-message ${role}`;
+
+    // Store raw content for copy functionality
+    messageDiv.setAttribute('data-raw-content', content);
+
+    // Format content based on role
+    let formattedContent;
+    if (role === 'assistant') {
+        formattedContent = formatMarkdown(content);
+    } else {
+        formattedContent = escapeHtml(content).replace(/\n/g, '<br>');
+    }
+
+    // Create message HTML with copy button for assistant messages
+    let copyButtonHtml = '';
+    if (role === 'assistant') {
+        copyButtonHtml = `
+            <button class="chat-copy-btn" onclick="copyMessage(this)" title="Copy response">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                <span class="copy-text">Copy</span>
+            </button>
+        `;
+    }
+
     messageDiv.innerHTML = `
-        <div class="chat-message-content">${escapeHtml(content).replace(/\n/g, '<br>')}</div>
-        <span class="chat-message-time">${time}</span>
+        <div class="chat-message-content">${formattedContent}</div>
+        <div class="chat-message-footer">
+            <span class="chat-message-time">${time}</span>
+            ${copyButtonHtml}
+        </div>
     `;
 
     chatMessages.appendChild(messageDiv);
     scrollToBottom();
+}
+
+// Copy message content to clipboard
+function copyMessage(button) {
+    const messageDiv = button.closest('.chat-message');
+    const rawContent = messageDiv.getAttribute('data-raw-content');
+
+    navigator.clipboard.writeText(rawContent).then(() => {
+        // Show success feedback
+        const copyText = button.querySelector('.copy-text');
+        const originalText = copyText.textContent;
+        copyText.textContent = 'Copied!';
+        button.classList.add('copied');
+
+        setTimeout(() => {
+            copyText.textContent = originalText;
+            button.classList.remove('copied');
+        }, 2000);
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        // Fallback for older browsers
+        fallbackCopy(rawContent);
+    });
+}
+
+// Fallback copy method for older browsers
+function fallbackCopy(text) {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-9999px';
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+        document.execCommand('copy');
+    } catch (err) {
+        console.error('Fallback copy failed:', err);
+    }
+    document.body.removeChild(textArea);
+}
+
+// Parse and format markdown-style content
+function formatMarkdown(text) {
+    // Escape HTML first
+    let html = escapeHtml(text);
+
+    // Headers: ## Header -> <h3>Header</h3>
+    html = html.replace(/^### \*\*(.+?)\*\*$/gm, '<h4 class="md-h4">$1</h4>');
+    html = html.replace(/^### (.+)$/gm, '<h4 class="md-h4">$1</h4>');
+    html = html.replace(/^## \*\*(.+?)\*\*$/gm, '<h3 class="md-h3">$1</h3>');
+    html = html.replace(/^## (.+)$/gm, '<h3 class="md-h3">$1</h3>');
+
+    // Bold: **text** -> <strong>text</strong>
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+    // Italic: *text* -> <em>text</em> (but not inside bold)
+    html = html.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '<em>$1</em>');
+
+    // Numbered lists: 1. Item -> <li>Item</li>
+    // First, wrap consecutive numbered items
+    const numberedListRegex = /^(\d+)\. (.+)$/gm;
+    let inNumberedList = false;
+    let listBuffer = [];
+    const lines = html.split('\n');
+    const processedLines = [];
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const numberedMatch = line.match(/^(\d+)\. (.+)$/);
+        const bulletMatch = line.match(/^[-•] (.+)$/);
+
+        if (numberedMatch) {
+            if (!inNumberedList) {
+                inNumberedList = true;
+                processedLines.push('<ol class="md-list">');
+            }
+            processedLines.push(`<li>${numberedMatch[2]}</li>`);
+        } else if (bulletMatch) {
+            if (inNumberedList) {
+                processedLines.push('</ol>');
+                inNumberedList = false;
+            }
+            // Handle bullet points
+            if (i === 0 || !lines[i-1].match(/^[-•] /)) {
+                processedLines.push('<ul class="md-list">');
+            }
+            processedLines.push(`<li>${bulletMatch[1]}</li>`);
+            if (i === lines.length - 1 || !lines[i+1].match(/^[-•] /)) {
+                processedLines.push('</ul>');
+            }
+        } else {
+            if (inNumberedList) {
+                processedLines.push('</ol>');
+                inNumberedList = false;
+            }
+            processedLines.push(line);
+        }
+    }
+
+    if (inNumberedList) {
+        processedLines.push('</ol>');
+    }
+
+    html = processedLines.join('\n');
+
+    // Convert remaining newlines to <br> (but not after block elements)
+    html = html.replace(/\n(?!<)/g, '<br>');
+    html = html.replace(/<br>(<(?:h[34]|ol|ul|li|\/ol|\/ul))/g, '$1');
+    html = html.replace(/(<\/(?:h[34]|li|ol|ul)>)<br>/g, '$1');
+
+    // Clean up extra breaks
+    html = html.replace(/<br><br>/g, '<br>');
+    html = html.replace(/^<br>/, '');
+    html = html.replace(/<br>$/, '');
+
+    return html;
 }
 
 // Show typing indicator

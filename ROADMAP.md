@@ -1,6 +1,6 @@
 # Product Roadmap - Investment Portfolio Analyzer
 
-> **Last Updated:** March 17, 2025
+> **Last Updated:** March 23, 2026
 >
 > This document tracks feature ideas, planned enhancements, and the product vision.
 
@@ -48,6 +48,262 @@
 ## Backlog
 
 ### High Priority
+
+#### AI Advisor Semantic Layer
+**Why:** Transform raw portfolio data into meaningful, contextualized knowledge for better AI recommendations
+**Effort:** High
+**Status:** Planned
+
+**The Problem:**
+Currently, the AI advisor receives raw portfolio data as a text dump in the system prompt. This approach:
+- Lacks relationship context (e.g., VTI and VOO have 100% overlap)
+- Missing fund knowledge (what is VTI? what sectors does it cover?)
+- No benchmark comparisons (am I underweight international?)
+- No pre-computed insights (just raw numbers)
+
+**What is a Semantic Layer?**
+A semantic layer is a **translation/enrichment layer** that transforms raw data into meaningful context:
+
+```
+Raw Data → Semantic Layer → Enriched Context → AI Advisor → Better Recommendations
+```
+
+**It is NOT:**
+- Investment philosophy (that's separate configuration)
+- The AI itself (it feeds the AI)
+- Just a database (it's active intelligence)
+
+**Semantic Layer Architecture:**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      SEMANTIC LAYER                              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌─────────────────┐    ┌─────────────────┐                     │
+│  │ 1. FUND         │    │ 2. RELATIONSHIP │                     │
+│  │    KNOWLEDGE    │    │    ENGINE       │                     │
+│  │    BASE         │    │                 │                     │
+│  │                 │    │ - Overlap       │                     │
+│  │ - Descriptions  │    │   detection     │                     │
+│  │ - Asset classes │    │ - Correlations  │                     │
+│  │ - Sectors       │    │ - Substitutes   │                     │
+│  │ - Expense ratios│    │                 │                     │
+│  └────────┬────────┘    └────────┬────────┘                     │
+│           │                      │                               │
+│           ▼                      ▼                               │
+│  ┌─────────────────────────────────────────┐                    │
+│  │         3. BENCHMARK COMPARISONS         │                    │
+│  │                                          │                    │
+│  │  - Target allocations (60/40, age-based) │                    │
+│  │  - "You're 15% underweight international"│                    │
+│  │  - Missing asset classes/sectors         │                    │
+│  └────────────────────┬────────────────────┘                    │
+│                       │                                          │
+│                       ▼                                          │
+│  ┌─────────────────────────────────────────┐                    │
+│  │       4. PRE-COMPUTED INSIGHTS           │                    │
+│  │                                          │                    │
+│  │  - Concentration warnings WITH context   │                    │
+│  │  - Rebalancing suggestions WITH reasons  │                    │
+│  │  - Tax optimization opportunities        │                    │
+│  │  - Overlap warnings                      │                    │
+│  └────────────────────┬────────────────────┘                    │
+│                       │                                          │
+│                       ▼                                          │
+│  ┌─────────────────────────────────────────┐                    │
+│  │       5. TEMPORAL CONTEXT (History)      │                    │
+│  │                                          │                    │
+│  │  - "NVDA grew from 3% to 8% in 6 months"│                    │
+│  │  - Previous recommendations & outcomes   │                    │
+│  │  - Trend analysis                        │                    │
+│  └─────────────────────────────────────────┘                    │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+                    ┌─────────────────┐
+                    │   AI ADVISOR    │
+                    │   (Claude)      │
+                    │                 │
+                    │ Receives rich,  │
+                    │ contextualized  │
+                    │ knowledge       │
+                    └─────────────────┘
+```
+
+**Component Details:**
+
+**1. Fund Knowledge Base**
+| Data | Source | Example |
+|------|--------|---------|
+| Fund Description | Static DB + APIs | "VTI: Vanguard Total Stock Market ETF, holds 4000+ US stocks" |
+| Asset Class | Mapping table | "VTI → US Equity, BND → Fixed Income" |
+| Sector Breakdown | Fund data | "VTI: 28% Tech, 13% Healthcare, 12% Financials" |
+| Expense Ratio | Fund data | "VTI: 0.03%, ARKK: 0.75%" |
+| Dividend Yield | API/static | "VTI: 1.5%, SCHD: 3.4%" |
+| Fund Family | Static | "VTI → Vanguard, SPY → State Street" |
+
+**2. Relationship Engine**
+| Relationship | Detection Method | Example Output |
+|--------------|------------------|----------------|
+| Overlap | Compare underlying holdings | "VTI contains all VOO holdings (100% overlap)" |
+| Correlation | Historical price data | "NVDA and AMD are highly correlated (0.85)" |
+| Substitutes | Same category + low cost | "Consider VTI (0.03%) instead of SWTSX (0.03%)" |
+| Tax Lot Pairs | Same security, different lots | "Harvest ARKK loss, keep ARKG for exposure" |
+
+**3. Benchmark Comparisons**
+| Benchmark Type | Implementation | Example Output |
+|----------------|----------------|----------------|
+| Age-Based Target | `100 - age` stocks | "At 35, target ~65% stocks. You have 80%." |
+| 60/40 Portfolio | Fixed comparison | "Typical 60/40: 60% stocks, 40% bonds. You: 85/5" |
+| Sector Weights | S&P 500 sector weights | "Tech is 28% of S&P. You have 45% (overweight)" |
+| Missing Classes | Check presence | "You have no REIT exposure (typical: 5-10%)" |
+
+**4. Pre-Computed Insights**
+| Insight Type | Current | With Semantic Layer |
+|--------------|---------|---------------------|
+| Concentration | "NVDA is 35%" | "NVDA is 35% (HIGH). Single stock >10% is risky. Consider trimming $8K to reach 25%." |
+| Diversification | "Score: 72" | "Score: 72. Strong US equity coverage via VTI. Gap: No international (target: 20-30%)." |
+| Tax Efficiency | "Score: 85" | "Score: 85. Opportunity: Harvest $2K ARKK loss to offset AAPL gains. Net tax savings: ~$500." |
+
+**5. Temporal Context**
+| Context Type | Data Source | Example Output |
+|--------------|-------------|----------------|
+| Position Drift | Historical snapshots | "NVDA grew from 8% to 35% over 12 months" |
+| Recommendation Tracking | Chat history + outcomes | "Last month suggested trimming TSLA. Still relevant." |
+| Performance Trends | Snapshot comparisons | "Portfolio +12% YTD vs S&P +8%" |
+
+**Implementation Plan:**
+
+**Phase 1: Fund Knowledge Base (Week 1-2)**
+- Create `src/services/semantic/fund_knowledge.py`
+- Build static database of 500+ common tickers
+- Include: description, asset class, sector, expense ratio
+- API integration for unknown tickers (Yahoo Finance)
+
+**Phase 2: Relationship Engine (Week 3)**
+- Create `src/services/semantic/relationships.py`
+- Implement overlap detection using ETF holdings data
+- Build fund similarity/substitute recommendations
+- Identify correlated positions
+
+**Phase 3: Benchmark Comparisons (Week 4)**
+- Create `src/services/semantic/benchmarks.py`
+- Implement target allocation models (age-based, 60/40, etc.)
+- Calculate deviation from targets
+- Identify missing asset classes
+
+**Phase 4: Pre-Computed Insights (Week 5)**
+- Create `src/services/semantic/insights.py`
+- Enhance existing concentration/diversification analysis
+- Add contextual explanations
+- Generate actionable recommendations
+
+**Phase 5: Integration & Temporal Context (Week 6)**
+- Create `src/services/semantic/context_builder.py`
+- Integrate with historical snapshots
+- Update AI advisor to use semantic context
+- Add recommendation tracking
+
+**Files to Create:**
+```
+src/services/semantic/
+├── __init__.py
+├── fund_knowledge.py      # Fund descriptions, asset classes, sectors
+├── relationships.py       # Overlap detection, correlations
+├── benchmarks.py          # Target allocations, comparisons
+├── insights.py            # Pre-computed contextual insights
+├── context_builder.py     # Assembles full semantic context
+└── data/
+    ├── fund_database.json # Static fund data (500+ tickers)
+    ├── sector_weights.json # S&P 500 sector weights
+    └── overlap_matrix.json # Common ETF overlaps
+```
+
+**Files to Modify:**
+- `src/services/ai_advisor.py` - Use SemanticContextBuilder instead of raw data
+- `src/web/app.py` - Pass semantic context to advisor
+
+**Example Output (Before vs After):**
+
+**Before (Raw Data):**
+```
+TOP 10 HOLDINGS:
+- VTI: $50,000 (25%)
+- VOO: $30,000 (15%)
+- NVDA: $70,000 (35%)
+```
+
+**After (Semantic Context):**
+```
+PORTFOLIO INTELLIGENCE:
+
+OVERLAP WARNING:
+VTI (Total US Market) and VOO (S&P 500) have 85% overlap.
+Combined exposure: $80,000 (40%) in essentially the same stocks.
+Consider: Keep VTI only, redeploy $30K from VOO to VXUS (international).
+
+CONCENTRATION ALERT:
+NVDA at 35% is HIGH RISK (single stock >10% threshold).
+- Has grown from 8% to 35% over past year (drift)
+- Sector: Technology (you're already 45% tech overall)
+- Action: Consider trimming $20K to reach 25% allocation
+
+MISSING ASSET CLASSES:
+- International Equities: 0% (target: 20-30%)
+- REITs: 0% (target: 5-10%)
+- Bonds: 5% (target for age 35: ~35%)
+
+BENCHMARK COMPARISON:
+Your allocation: 95% stocks, 5% bonds
+Age-based target: 65% stocks, 35% bonds
+Action: Consider adding BND or BNDX for bond exposure
+```
+
+**Success Metrics:**
+- AI recommendations reference specific fund characteristics
+- Overlap warnings catch redundant holdings
+- Recommendations include dollar amounts based on analysis
+- User feedback: "Recommendations feel more personalized"
+
+**Resources & Learning:**
+- [Building Semantic Layers for Analytics](https://www.getdbt.com/blog/semantic-layer)
+- [ETF Overlap Tools](https://www.etfrc.com/funds/overlap.php) - for overlap logic
+- [Morningstar Categories](https://www.morningstar.com/investing-definitions/morningstar-category) - for classification
+
+---
+
+#### Investment Philosophy Configuration (Separate from Semantic Layer)
+**Why:** Allow users to customize AI recommendations based on their investment style
+**Effort:** Medium
+**Status:** Future (after Semantic Layer)
+
+**Note:** This is DIFFERENT from the semantic layer. The semantic layer provides knowledge/context. Investment philosophy provides preferences/constraints.
+
+**Example Philosophies:**
+```python
+PHILOSOPHIES = {
+    "passive_index": {
+        "prefer": ["VTI", "VXUS", "BND"],
+        "avoid": ["individual stocks", "active funds"],
+        "max_expense_ratio": 0.10,
+        "rebalance_threshold": 5  # % drift before rebalancing
+    },
+    "dividend_growth": {
+        "prefer": ["SCHD", "VIG", "dividend aristocrats"],
+        "min_yield": 2.0,
+        "focus": "growing dividend income"
+    },
+    "aggressive_growth": {
+        "prefer": ["QQQ", "VGT", "growth stocks"],
+        "risk_tolerance": "high",
+        "time_horizon": "10+ years"
+    }
+}
+```
+
+---
 
 #### Target Date Fund / Investment Fund Profile Ingestion
 **Why:** 401k statements show target date funds as single holdings, but they contain multiple underlying investments (stocks, bonds, international). Without fund profiles, diversification and sector analysis is inaccurate.
