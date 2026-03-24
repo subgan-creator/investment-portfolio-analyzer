@@ -17,6 +17,15 @@ try:
 except ImportError:
     from services.rebalancing import RebalancingCalculator
 
+# Import semantic layer
+try:
+    from src.services.semantic import build_semantic_context
+except ImportError:
+    try:
+        from services.semantic import build_semantic_context
+    except ImportError:
+        build_semantic_context = None
+
 
 class AIAdvisor:
     """AI investment advisor that provides portfolio insights using Claude."""
@@ -142,7 +151,19 @@ ANALYSIS SCORES:
                 context += f"- {pos.get('ticker', 'N/A')}: {pos.get('percentage', 0):.1f}% - Risk Level: {pos.get('risk_level', 'N/A')}\n"
 
         context += "\n=== END PORTFOLIO DATA ===\n"
-        context += "\nUse the above data to give specific, personalized recommendations. Do NOT ask the user for portfolio information - you already have it.\n"
+
+        # Add semantic intelligence layer
+        semantic_context = ""
+        if build_semantic_context and self.portfolio_data:
+            try:
+                semantic = build_semantic_context(self.portfolio_data)
+                semantic_context = "\n" + semantic.formatted_context
+            except Exception as e:
+                print(f"[AI Advisor] Semantic layer error (non-fatal): {e}")
+                semantic_context = ""
+
+        context += semantic_context
+        context += "\nUse the above data and semantic intelligence to give specific, personalized recommendations. Do NOT ask the user for portfolio information - you already have it.\n"
 
         return base_prompt + context
 
