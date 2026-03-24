@@ -241,6 +241,81 @@ for ticker, ac, sector, desc in test_cases:
 
 ---
 
+### DEF-004: Fund Profile PDF Upload Causes 502 Error on Render (Out of Memory)
+
+**Date Found:** March 24, 2026
+**Severity:** High
+**Status:** Resolved
+
+**Symptoms:**
+- Uploading a fund profile PDF on Render returns 502 Bad Gateway
+- Render logs show: "Instance failed: Ran out of memory (used over 512MB)"
+- Works fine locally, fails only on Render's free tier (512MB memory limit)
+
+**Root Cause:**
+The `pdfplumber` library loads PDF content into memory. The original `parse_jpmc_fund_profile_pdf()` function opened the PDF once and iterated through all pages while keeping the PDF object open. This caused memory to accumulate because:
+1. PDF parsing buffers weren't released until the `with` block completed
+2. Each page's extracted text added to memory usage
+3. Large PDFs (50+ pages) could easily exceed 512MB
+
+**Fix Applied:**
+1. **Memory-optimized parsing** - Process pages one at a time by reopening the PDF for each page, allowing garbage collection between pages
+2. **Focused page range** - Only scan pages 10-30 where Target Date Funds typically appear (instead of all pages)
+3. **Explicit garbage collection** - Call `gc.collect()` after processing each page to free memory immediately
+4. **Better logging** - Added detailed logging to help diagnose future issues
+
+**Key Code Change:**
+```python
+# BEFORE (memory-hungry):
+with pdfplumber.open(pdf_path) as pdf:
+    for page in pdf.pages:  # All pages held in memory
+        text = page.extract_text()
+        # ... process
+
+# AFTER (memory-efficient):
+for page_num in range(start_page, end_page):
+    with pdfplumber.open(pdf_path) as pdf:  # Reopen for each page
+        page = pdf.pages[page_num]
+        text = page.extract_text()
+        # ... process
+    gc.collect()  # Force memory release
+```
+
+**Files Changed:**
+- `src/utils/fund_profile_parser.py` - Rewrote `parse_jpmc_fund_profile_pdf()` function
+- `src/web/app.py` - Added logging for file size and parse progress
+- `gunicorn.conf.py` - Added `preload_app=True` and `capture_output=False`
+
+**Verification:**
+1. Deploy to Render
+2. Navigate to `/fund-profiles`
+3. Upload a JPMC fund profile PDF
+4. Check Render logs for:
+   ```
+   [Fund Profile Upload] Saved file: ...
+   [Fund Profile Upload] File size: ... bytes
+   [Fund Profile Upload] Starting PDF parse...
+   [Fund Profile Upload] Parse complete. Found X profiles
+   ```
+5. No 502 error, profiles saved successfully
+
+**Prevention - Render Memory Guidelines:**
+- **512MB is tight** - Render's free tier has minimal memory
+- **Avoid loading entire PDFs at once** - Process page-by-page
+- **Use `gc.collect()`** - Force Python to release memory between operations
+- **Set `max_requests` in gunicorn** - Restart workers periodically to prevent memory leaks
+- **Log memory-intensive operations** - Add timing/size logging to identify bottlenecks
+- **Consider async processing** - For large files, use background jobs instead of synchronous requests
+
+**Related Configuration (gunicorn.conf.py):**
+```python
+workers = 1           # Single worker to minimize memory
+preload_app = True    # Load app before forking for faster startup
+max_requests = 100    # Restart worker every 100 requests to free memory
+```
+
+---
+
 ## Open Defects
 
 *None currently tracked*
