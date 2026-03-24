@@ -286,6 +286,12 @@ CRITICAL INSTRUCTIONS - YOU MUST FOLLOW THESE:
 7. Address concentration risks with specific reduction amounts
 8. Consider tax implications (harvesting, location)
 
+CRITICAL - LOOK-THROUGH ALLOCATION:
+- When "LOOK-THROUGH" or "TRUE" allocation data is shown, USE THOSE NUMBERS
+- Target date funds CONTAIN international stocks and bonds INSIDE them
+- If look-through shows 6.7% international, DO NOT say "zero international exposure"
+- The look-through data is the ACCURATE picture after expanding target date funds
+
 OUTPUT FORMAT - Structure your response like this:
 
 **Portfolio Assessment:**
@@ -314,18 +320,25 @@ DISCLAIMER: Remind them this is educational guidance, not personalized financial
         if not self.portfolio_data:
             return base_prompt + "\n\nNote: No portfolio data available."
 
-        # Add portfolio context
-        context = self.build_system_prompt().split("PORTFOLIO CONTEXT:")[1] if "PORTFOLIO CONTEXT:" in self.build_system_prompt() else ""
+        # Get the full system prompt which includes look-through data
+        full_prompt = self.build_system_prompt()
+
+        # Extract portfolio data section (everything after the guidelines)
+        if "=== COMPLETE PORTFOLIO DATA" in full_prompt:
+            context = full_prompt.split("=== COMPLETE PORTFOLIO DATA")[1]
+            context = "=== COMPLETE PORTFOLIO DATA" + context
+        else:
+            context = ""
 
         # Add rebalancing analysis
         try:
             calculator = RebalancingCalculator(self.portfolio_data)
             rebalancing_context = calculator.format_for_ai_context()
-            context += rebalancing_context
+            context += "\n" + rebalancing_context
         except Exception:
             pass  # Continue without rebalancing context if it fails
 
-        return base_prompt + "\n\nPORTFOLIO CONTEXT:" + context
+        return base_prompt + "\n\n" + context
 
     def get_specific_recommendations(self) -> str:
         """
