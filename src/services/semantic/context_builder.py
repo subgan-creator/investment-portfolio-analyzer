@@ -119,6 +119,25 @@ class SemanticContextBuilder:
 
         return enriched
 
+    def _get_look_through_allocation(self, portfolio_data: Dict[str, Any]) -> Dict[str, float]:
+        """
+        Extract look-through allocation percentages from portfolio data.
+
+        This is the TRUE allocation after expanding target date funds.
+        """
+        look_through = portfolio_data.get("look_through", {})
+        if not look_through.get("available"):
+            return {}
+
+        allocation = {}
+        for item in look_through.get("allocation", []):
+            # Normalize name to lowercase for consistent lookup
+            name = item.get("name", "").lower().strip()
+            percent = item.get("percent", 0)
+            allocation[name] = percent
+
+        return allocation
+
     def _generate_key_insights(
         self,
         enriched_holdings: List[Dict[str, Any]],
@@ -129,6 +148,9 @@ class SemanticContextBuilder:
         """Generate the most important insights for the AI."""
         insights = []
 
+        # Get look-through allocation if available (more accurate)
+        look_through = self._get_look_through_allocation(portfolio_data)
+
         # High-impact overlap warnings
         high_overlaps = [o for o in overlap_warnings if o["overlap_percent"] >= 80]
         if high_overlaps:
@@ -138,13 +160,32 @@ class SemanticContextBuilder:
                     f"{overlap['overlap_percent']}% overlap - consider consolidating"
                 )
 
-        # Missing asset classes
-        for missing in allocation.missing_asset_classes:
-            insights.append(f"MISSING: No {missing} exposure - consider adding for diversification")
+        # Check for missing asset classes using look-through data if available
+        if look_through:
+            # Calculate true international exposure
+            intl_pct = look_through.get("international developed", 0) + look_through.get("emerging markets", 0)
+            bond_pct = look_through.get("core bonds", 0) + look_through.get("high yield bonds", 0) + look_through.get("em bonds", 0)
+            reit_pct = look_through.get("real estate", 0)
 
-        # Allocation recommendations
-        for rec in allocation.recommendations[:3]:  # Top 3 recommendations
-            insights.append(f"ALLOCATION: {rec}")
+            # Only flag missing if truly missing after look-through
+            if intl_pct < 5:
+                insights.append(f"ALLOCATION: International exposure is only {intl_pct:.1f}% (target: 15-30%) - consider adding VXUS")
+            elif intl_pct < 15:
+                insights.append(f"ALLOCATION: International exposure is {intl_pct:.1f}% (below typical 15-30%) - may want to increase")
+            if bond_pct < 5 and allocation.stock_percent > 50:
+                insights.append(f"ALLOCATION: Bond exposure is {bond_pct:.1f}% - may need more for stability")
+            if reit_pct < 0.5:
+                insights.append("MISSING: No significant Real Estate (REIT) exposure - consider VNQ (target: 5-10%)")
+            elif reit_pct < 3:
+                insights.append(f"ALLOCATION: Real Estate is only {reit_pct:.1f}% (below typical 5-10%)")
+        else:
+            # Fall back to basic allocation analysis (no look-through data)
+            for missing in allocation.missing_asset_classes:
+                insights.append(f"MISSING: No {missing} exposure - consider adding for diversification")
+
+            # Only use basic allocation recommendations when no look-through
+            for rec in allocation.recommendations[:3]:  # Top 3 recommendations
+                insights.append(f"ALLOCATION: {rec}")
 
         # Individual stock concentration
         for h in enriched_holdings:
@@ -205,17 +246,35 @@ class SemanticContextBuilder:
                 sections.append(f"  → {overlap['recommendation']}")
             sections.append("")
 
-        # Allocation analysis
+        # Allocation analysis - use look-through if available for accuracy
+        look_through = self._get_look_through_allocation(portfolio_data)
+
         sections.append("## ALLOCATION ANALYSIS:\n")
         sections.append(f"- Portfolio Style: {allocation.profile_match.upper()}")
-        sections.append(f"- Stocks: {allocation.stock_percent:.1f}%")
-        sections.append(f"- Bonds: {allocation.bond_percent:.1f}%")
-        sections.append(f"- Other: {allocation.other_percent:.1f}%")
-        sections.append(f"- International (of stocks): {allocation.intl_of_stocks:.1f}%")
+
+        if look_through:
+            # Use TRUE allocation from look-through analysis
+            sections.append("(Based on look-through analysis - target date funds expanded)")
+            intl_pct = look_through.get("international developed", 0) + look_through.get("emerging markets", 0)
+            bond_pct = look_through.get("core bonds", 0) + look_through.get("high yield bonds", 0) + look_through.get("em bonds", 0) + look_through.get("inflation protected", 0)
+            reit_pct = look_through.get("real estate", 0)
+            cash_pct = look_through.get("cash", 0)
+            stock_pct = look_through.get("stock", 0) + look_through.get("us large cap", 0) + look_through.get("us mid cap", 0) + look_through.get("us small cap", 0) + intl_pct
+
+            sections.append(f"- TRUE Stock Exposure: {stock_pct:.1f}%")
+            sections.append(f"- TRUE Bond Exposure: {bond_pct:.1f}%")
+            sections.append(f"- TRUE International: {intl_pct:.1f}%")
+            sections.append(f"- Cash: {cash_pct:.1f}%")
+            sections.append(f"- Real Estate: {reit_pct:.1f}%")
+        else:
+            sections.append(f"- Stocks: {allocation.stock_percent:.1f}%")
+            sections.append(f"- Bonds: {allocation.bond_percent:.1f}%")
+            sections.append(f"- Other: {allocation.other_percent:.1f}%")
+            sections.append(f"- International (of stocks): {allocation.intl_of_stocks:.1f}%")
         sections.append("")
 
-        # Missing asset classes
-        if allocation.missing_asset_classes:
+        # Missing asset classes - only if NOT using look-through (look-through insights are in key_insights)
+        if not look_through and allocation.missing_asset_classes:
             sections.append("## MISSING ASSET CLASSES:\n")
             for missing in allocation.missing_asset_classes:
                 if missing == "International Equities":
