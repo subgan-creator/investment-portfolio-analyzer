@@ -62,6 +62,13 @@ IMPORTANT GUIDELINES:
 - Never provide specific buy/sell timing recommendations
 - Always remind users to consult a financial advisor for major decisions
 
+CRITICAL - LOOK-THROUGH ANALYSIS:
+- When "LOOK-THROUGH" allocation data is available, USE IT for all allocation calculations
+- Target date funds contain stocks, bonds, and international exposure INSIDE them
+- The look-through data shows the TRUE allocation after expanding these funds
+- Do NOT say "zero international" if look-through shows international exposure exists
+- Example: If top holdings show TARGETDAT 22%, but look-through shows 6.7% international - the user HAS 6.7% international
+
 DISCLAIMER: This is educational information, not personalized financial advice."""
 
         if not self.portfolio_data:
@@ -78,6 +85,7 @@ DISCLAIMER: This is educational information, not personalized financial advice."
         category_allocation = self.portfolio_data.get('category_allocation', [])
         accounts = self.portfolio_data.get('accounts', [])
         source_breakdown = self.portfolio_data.get('source_breakdown', [])
+        look_through = self.portfolio_data.get('look_through', {})
 
         # Build portfolio context
         context = f"""
@@ -97,6 +105,28 @@ ANALYSIS SCORES:
 - Top 10 Holdings Concentration: {concentration.get('top_10_concentration', 0):.1f}%
 - Tax Efficiency Score: {tax.get('score', 'N/A')}/100 ({tax.get('rating', 'N/A')})
 """
+
+        # Add LOOK-THROUGH allocation prominently if available
+        # This is the TRUE allocation after expanding target date funds
+        if look_through.get('available'):
+            context += "\n*** CRITICAL: TRUE ASSET ALLOCATION (Look-Through Analysis) ***\n"
+            context += "Target date funds have been expanded to show actual underlying exposure.\n"
+            context += "USE THESE NUMBERS for allocation recommendations, not the surface-level holdings.\n\n"
+            for item in look_through.get('allocation', []):
+                name = item.get('name', 'Unknown')
+                pct = item.get('percent', 0)
+                value = item.get('value', 0)
+                context += f"- {name}: {pct:.1f}% (${value:,.0f})\n"
+
+            # Calculate key aggregates
+            alloc_dict = {item.get('name', '').lower(): item.get('percent', 0) for item in look_through.get('allocation', [])}
+            intl_pct = alloc_dict.get('international developed', 0) + alloc_dict.get('emerging markets', 0)
+            bond_pct = alloc_dict.get('core bonds', 0) + alloc_dict.get('high yield bonds', 0) + alloc_dict.get('em bonds', 0) + alloc_dict.get('inflation protected', 0)
+
+            context += f"\nKEY LOOK-THROUGH TOTALS:\n"
+            context += f"- TRUE International Exposure: {intl_pct:.1f}%\n"
+            context += f"- TRUE Bond Exposure: {bond_pct:.1f}%\n"
+            context += "*** END LOOK-THROUGH DATA ***\n"
 
         # Add accounts breakdown
         if accounts:
