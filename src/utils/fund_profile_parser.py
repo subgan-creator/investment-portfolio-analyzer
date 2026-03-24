@@ -191,64 +191,85 @@ def parse_jpmc_fund_profile_pdf(pdf_path: str) -> List[Dict[str, Any]]:
     """
     Parse JPMC Empower Fund Profile PDF and extract all Target Date Funds.
 
+    Memory-optimized version that processes pages individually to stay
+    under Render's 512MB memory limit.
+
     Args:
         pdf_path: Path to the fund profile PDF
 
     Returns:
         List of fund profile dictionaries
     """
+    import gc
+
     funds = []
     processed_years = set()
 
+    # First, determine total pages without loading content
     with pdfplumber.open(pdf_path) as pdf:
-        # Target Date Funds are typically on pages 13-18 (0-indexed: 12-17)
-        # But we'll scan through all pages to be safe
+        total_pages = len(pdf.pages)
 
-        for page_num, page in enumerate(pdf.pages):
-            text = page.extract_text() or ''
+    # Target Date Funds are typically on pages 10-25 in JPMC PDFs
+    # We'll scan a focused range to save memory
+    start_page = max(0, 10)
+    end_page = min(total_pages, 30)
 
-            # Look for Target Date Fund pages
-            if 'Target Date' not in text:
-                continue
+    # Process pages one at a time to minimize memory usage
+    for page_num in range(start_page, end_page):
+        # Open PDF fresh for each page to avoid memory buildup
+        try:
+            with pdfplumber.open(pdf_path) as pdf:
+                if page_num >= len(pdf.pages):
+                    break
 
-            # Extract fund years mentioned on this page
-            # Pattern: "Target Date XXXX Fund"
-            year_pattern = r'Target Date (\d{4}) Fund'
-            years_found = [int(y) for y in re.findall(year_pattern, text)]
-            years_found = sorted(set(years_found))  # Unique and sorted
+                page = pdf.pages[page_num]
+                text = page.extract_text() or ''
 
-            # Also check for Target Date Income Fund
-            if 'Target Date Income Fund' in text and 'income' not in processed_years:
-                income_fund = extract_target_date_income_fund(text)
-                if income_fund:
-                    funds.append(income_fund)
-                    processed_years.add('income')
-
-            # Handle two-funds-per-page layout (most common in JPMC PDFs)
-            if len(years_found) == 2:
-                year1, year2 = years_found[0], years_found[1]
-
-                # Skip if we already have both funds
-                if year1 in processed_years and year2 in processed_years:
+                # Skip pages without Target Date content
+                if 'Target Date' not in text:
                     continue
 
-                fund1, fund2 = extract_two_funds_from_page(text, year1, year2)
+                # Extract fund years mentioned on this page
+                year_pattern = r'Target Date (\d{4}) Fund'
+                years_found = [int(y) for y in re.findall(year_pattern, text)]
+                years_found = sorted(set(years_found))
 
-                if fund1 and year1 not in processed_years:
-                    funds.append(fund1)
-                    processed_years.add(year1)
+                # Check for Target Date Income Fund
+                if 'Target Date Income Fund' in text and 'income' not in processed_years:
+                    income_fund = extract_target_date_income_fund(text)
+                    if income_fund:
+                        funds.append(income_fund)
+                        processed_years.add('income')
 
-                if fund2 and year2 not in processed_years:
-                    funds.append(fund2)
-                    processed_years.add(year2)
+                # Handle two-funds-per-page layout
+                if len(years_found) == 2:
+                    year1, year2 = years_found[0], years_found[1]
 
-            elif len(years_found) == 1:
-                year = years_found[0]
-                if year not in processed_years:
-                    fund_data = extract_target_date_fund_from_text(text, year)
-                    if fund_data:
-                        funds.append(fund_data)
-                        processed_years.add(year)
+                    if year1 not in processed_years or year2 not in processed_years:
+                        fund1, fund2 = extract_two_funds_from_page(text, year1, year2)
+
+                        if fund1 and year1 not in processed_years:
+                            funds.append(fund1)
+                            processed_years.add(year1)
+
+                        if fund2 and year2 not in processed_years:
+                            funds.append(fund2)
+                            processed_years.add(year2)
+
+                elif len(years_found) == 1:
+                    year = years_found[0]
+                    if year not in processed_years:
+                        fund_data = extract_target_date_fund_from_text(text, year)
+                        if fund_data:
+                            funds.append(fund_data)
+                            processed_years.add(year)
+
+        except Exception as e:
+            print(f"[Fund Parser] Error on page {page_num}: {e}", flush=True)
+            continue
+
+        # Force garbage collection after each page
+        gc.collect()
 
     # Sort by target year
     funds.sort(key=lambda f: f.get('target_year') or 0)

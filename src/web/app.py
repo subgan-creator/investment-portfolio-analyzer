@@ -1133,8 +1133,13 @@ def upload_fund_profile():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
         file.save(filepath)
 
+        print(f"[Fund Profile Upload] Saved file: {filepath}", flush=True)
+        print(f"[Fund Profile Upload] File size: {os.path.getsize(filepath)} bytes", flush=True)
+
         # Parse the fund profile PDF
+        print(f"[Fund Profile Upload] Starting PDF parse...", flush=True)
         profiles = parse_fund_profile_pdf(filepath)
+        print(f"[Fund Profile Upload] Parse complete. Found {len(profiles) if profiles else 0} profiles", flush=True)
 
         if not profiles:
             flash('Could not extract any fund profiles from the PDF. Please check the format.', 'error')
@@ -1184,7 +1189,10 @@ def upload_fund_profile():
 
     except Exception as e:
         import traceback
+        print(f"[Fund Profile Upload] ERROR: {str(e)}", flush=True)
         traceback.print_exc()
+        sys.stdout.flush()
+        sys.stderr.flush()
         flash(f'Error processing fund profile: {str(e)}', 'error')
         return redirect(url_for('fund_profiles'))
 
