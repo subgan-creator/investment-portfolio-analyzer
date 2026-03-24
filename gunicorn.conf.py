@@ -9,6 +9,7 @@ bind = f"0.0.0.0:{os.environ.get('PORT', '10000')}"
 # Worker settings
 workers = 1  # Use single worker to minimize memory usage on 512MB instances
 worker_class = "sync"
+preload_app = True  # Load app before forking workers for faster startup
 
 # Timeout settings - increased for PDF processing
 timeout = 120  # Allow 2 minutes for large PDF processing (default is 30s)
@@ -18,6 +19,9 @@ graceful_timeout = 30
 accesslog = "-"  # Log to stdout
 errorlog = "-"   # Log to stderr
 loglevel = "info"
+
+# Disable capture_output to prevent buffering issues
+capture_output = False
 
 # Memory optimization
 max_requests = 100  # Restart worker after 100 requests to prevent memory leaks
