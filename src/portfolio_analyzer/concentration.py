@@ -163,21 +163,41 @@ class ConcentrationRiskAnalyzer:
         }
     
     def assess_concentration_risk(self) -> Dict[str, Any]:
-        """Assess overall concentration risk level"""
+        """
+        Assess overall concentration risk level.
+
+        Note: The top_10 percentage threshold is only meaningful when there are
+        many holdings. For portfolios with <=10 holdings (common for 401k plans),
+        the concentrated_positions count is the primary risk indicator.
+        """
         concentrated_positions = self.identify_concentrated_positions()
         top_10 = self.calculate_top_n_concentration(10)
-        
-        # Determine risk level
-        if len(concentrated_positions) == 0 and top_10['percentage'] < 50:
+        total_holdings = len(self.portfolio.get_all_holdings())
+
+        # For portfolios with few holdings (e.g., 401k plans with ~10 funds),
+        # the top_10 percentage is not a useful metric since all holdings
+        # would naturally be in the "top 10"
+        few_holdings = total_holdings <= 12
+
+        # Determine risk level based on actual concentrated (problematic) positions
+        if len(concentrated_positions) == 0:
+            # No concentrated positions = Low risk
+            # (regardless of top_10 percentage for small portfolios)
             risk_level = 'Low'
             risk_score = 1
-        elif len(concentrated_positions) <= 2 and top_10['percentage'] < 70:
-            risk_level = 'Moderate'
-            risk_score = 2
+        elif len(concentrated_positions) <= 2:
+            # Few concentrated positions
+            if few_holdings or top_10['percentage'] < 70:
+                risk_level = 'Moderate'
+                risk_score = 2
+            else:
+                risk_level = 'High'
+                risk_score = 3
         else:
+            # Many concentrated positions = High risk
             risk_level = 'High'
             risk_score = 3
-        
+
         return {
             'risk_level': risk_level,
             'risk_score': risk_score,

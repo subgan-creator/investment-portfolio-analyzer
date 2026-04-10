@@ -91,6 +91,18 @@
                         <div style="font-size: 2rem; font-weight: 700; color: var(--primary);">
                             ${{ "{:,.2f}".format(data.portfolio.total_value) }}
                         </div>
+                        {% if data.portfolio.cost_basis_stats and data.portfolio.cost_basis_stats.estimated_percentage >= 100 %}
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; color: var(--text-secondary);">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="8" x2="12" y2="12"></line>
+                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                            </svg>
+                            <span style="font-weight: 500; font-style: italic;" title="Cost basis not available in statement">
+                                Gain/Loss: N/A
+                            </span>
+                        </div>
+                        {% else %}
                         <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; color: {{ 'var(--success)' if data.portfolio.unrealized_gain_loss >= 0 else 'var(--danger)' }};">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 {% if data.portfolio.unrealized_gain_loss >= 0 %}
@@ -106,6 +118,7 @@
                                 ({{ "{:.2f}".format(data.portfolio.return_percent) }}%)
                             </span>
                         </div>
+                        {% endif %}
                         <!-- Mini stats -->
                         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border);">
                             <div style="text-align: center;">
@@ -392,10 +405,45 @@
             </section>
             {% endif %}
 
+            <!-- Simplified Asset Allocation - True Portfolio Breakdown -->
+            {% if data.simplified_allocation and data.simplified_allocation|length > 0 %}
+            <section class="card simplified-allocation-section">
+                <h2>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: inline; vertical-align: middle; margin-right: 0.5rem;">
+                        <path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path>
+                        <path d="M22 12A10 10 0 0 0 12 2v10z"></path>
+                    </svg>
+                    Asset Allocation
+                </h2>
+                <p class="section-desc">Your portfolio broken down into core asset classes.</p>
+                <div class="source-breakdown-container">
+                    <div class="source-chart-container">
+                        <div class="source-pie-chart" style="width: 260px; height: 260px;">
+                            <canvas id="simplifiedAllocationChart" width="260" height="260"></canvas>
+                        </div>
+                        <div class="simplified-legend">
+                            {% for item in data.simplified_allocation %}
+                            {% if item.value > 0 %}
+                            <div class="simplified-legend-item" data-asset-class="{{ item.name }}">
+                                <span class="simplified-legend-color" style="background-color: {{ item.color }};"></span>
+                                <div class="simplified-legend-info">
+                                    <span class="simplified-legend-name">{{ item.name }}</span>
+                                </div>
+                                <span class="simplified-legend-percent">{{ "{:.1f}".format(item.percent) }}%</span>
+                                <span class="simplified-legend-value">${{ "{:,.0f}".format(item.value) }}</span>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </section>
+            {% endif %}
+
             <div class="two-column">
-                <!-- Asset Allocation -->
+                <!-- Asset Allocation by Type -->
                 <section class="card">
-                    <h2>Asset Allocation</h2>
+                    <h2>Asset Allocation by Type</h2>
                     <div class="allocation-list">
                         {% for item in data.asset_allocation %}
                         <div class="allocation-item">
@@ -435,9 +483,15 @@
                             </span>
                             <span class="value">${{ "{:,.0f}".format(holding.value) }}</span>
                             <span class="percent">{{ "{:.1f}".format(holding.percent) }}%</span>
+                            {% if holding.cost_basis_estimated %}
+                            <span class="gain-loss estimated" title="Cost basis not available in statement - gain/loss cannot be calculated">
+                                N/A
+                            </span>
+                            {% else %}
                             <span class="gain-loss {{ 'positive' if holding.gain_loss >= 0 else 'negative' }}">
                                 {{ "+" if holding.gain_loss >= 0 else "" }}${{ "{:,.0f}".format(holding.gain_loss) }}
                             </span>
+                            {% endif %}
                         </div>
                         {% endfor %}
                     </div>
@@ -722,6 +776,53 @@
                 document.querySelectorAll('.lt-color-10').forEach(el => el.style.backgroundColor = ltColors[9]);
                 document.querySelectorAll('.lt-color-11').forEach(el => el.style.backgroundColor = ltColors[10]);
                 document.querySelectorAll('.lt-color-12').forEach(el => el.style.backgroundColor = ltColors[11]);
+            }
+        }
+
+        // Simplified Asset Allocation chart
+        const simplifiedChartCanvas = document.getElementById('simplifiedAllocationChart');
+        if (simplifiedChartCanvas) {
+            const simplifiedData = [
+                {% if data.simplified_allocation %}
+                {% for item in data.simplified_allocation %}
+                {% if item.value > 0 %}
+                { name: '{{ item.name }}', value: {{ item.value }}, color: '{{ item.color }}' }{% if not loop.last %},{% endif %}
+                {% endif %}
+                {% endfor %}
+                {% endif %}
+            ];
+
+            if (simplifiedData.length > 0) {
+                new Chart(simplifiedChartCanvas, {
+                    type: 'doughnut',
+                    data: {
+                        labels: simplifiedData.map(d => d.name),
+                        datasets: [{
+                            data: simplifiedData.map(d => d.value),
+                            backgroundColor: simplifiedData.map(d => d.color),
+                            borderWidth: 3,
+                            borderColor: '#ffffff',
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const value = context.raw;
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percent = ((value / total) * 100).toFixed(1);
+                                        return `$${value.toLocaleString()} (${percent}%)`;
+                                    }
+                                }
+                            }
+                        },
+                        cutout: '50%'
+                    }
+                });
             }
         }
     </script>

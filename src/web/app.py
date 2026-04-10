@@ -39,7 +39,10 @@ from src.services.fund_matcher import (
     match_holding_to_profile
 )
 from src.utils.fund_profile_parser import parse_fund_profile_pdf, validate_fund_profile
-from src.utils.sector_classifier import classify_holding, consolidate_by_category_group, CATEGORY_GROUP_ORDER
+from src.utils.sector_classifier import (
+    classify_holding, consolidate_by_category_group, CATEGORY_GROUP_ORDER,
+    calculate_simplified_allocation, get_simplified_asset_colors
+)
 
 app = Flask(__name__,
             template_folder='templates',
@@ -711,6 +714,9 @@ def analyze():
         # Build consolidated category group allocation
         analysis_data['category_allocation'] = consolidate_by_category_group(detailed_allocation)
 
+        # Build simplified asset allocation (Stocks, Bonds, REITs, Alternatives, Commodities, Other)
+        analysis_data['simplified_allocation'] = calculate_simplified_allocation(detailed_allocation)
+
         # Top holdings - consolidate by ticker to avoid duplicates across accounts
         holdings_by_ticker = {}
         for holding in portfolio.get_all_holdings():
@@ -721,11 +727,14 @@ def analyze():
                 total_value = existing['value'] + holding.market_value
                 total_cost = existing['cost_basis'] + (holding.cost_basis_per_share * holding.shares)
                 total_shares = existing['shares'] + holding.shares
+                # If any holding has estimated cost basis, mark the consolidated one as estimated
+                cost_estimated = existing.get('cost_basis_estimated', False) or getattr(holding, 'cost_basis_estimated', False)
                 holdings_by_ticker[ticker] = {
                     'value': total_value,
                     'cost_basis': total_cost,
                     'shares': total_shares,
                     'full_name': existing.get('full_name') or getattr(holding, 'description', ''),
+                    'cost_basis_estimated': cost_estimated,
                 }
             else:
                 holdings_by_ticker[ticker] = {
@@ -733,6 +742,7 @@ def analyze():
                     'cost_basis': holding.cost_basis_per_share * holding.shares,
                     'shares': holding.shares,
                     'full_name': getattr(holding, 'description', ''),  # Full fund name from PDF
+                    'cost_basis_estimated': getattr(holding, 'cost_basis_estimated', False),
                 }
 
         # Sort by total value and get top 10
@@ -753,6 +763,7 @@ def analyze():
                 'name': ticker_info['name'],
                 'description': ticker_info['desc'],
                 'url': ticker_info['url'],
+                'cost_basis_estimated': data.get('cost_basis_estimated', False),
             })
 
         # Diversification analysis
@@ -1268,10 +1279,12 @@ def api_match_fund_profile():
 
 
 if __name__ == '__main__':
+    import os
+    port = int(os.environ.get('PORT', 5001))  # Default to 5001 (5000 is used by AirPlay on macOS)
     print("\n" + "="*60)
     print("Investment Portfolio Analyzer - Web Interface")
     print("="*60)
-    print("\nOpen your browser and go to: http://127.0.0.1:5000")
+    print(f"\nOpen your browser and go to: http://127.0.0.1:{port}")
     print("\nPress Ctrl+C to stop the server")
     print("="*60 + "\n")
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=port)
