@@ -1,6 +1,6 @@
 # Product Roadmap - Investment Portfolio Analyzer
 
-> **Last Updated:** March 23, 2026
+> **Last Updated:** March 29, 2026
 >
 > This document tracks feature ideas, planned enhancements, and the product vision.
 
@@ -20,9 +20,10 @@
 ## Current Sprint
 
 ### In Progress
-*No items currently in progress*
+*None currently*
 
 ### Just Completed
+- [x] Simplified Asset Allocation Display (Stocks, Bonds, REITs, Alternatives, Commodities, Other)
 - [x] Modern UI Redesign (CSS design system, dashboard cards, insight cards)
 - [x] Fixed JPMC Empower PDF multi-line fund name parsing
 
@@ -557,6 +558,225 @@ a risk factor. Consider trimming if NVDA approaches $950.
 - Custom frequency (daily/weekly/monthly)
 - Sector-specific deep dives
 
+
+#### Proactive Tax Intelligence Engine
+**Why:** Every app files or tracks taxes backward. None tells you in August "sell this loser to offset your gains before Dec 31" or "move this to your Roth now." TurboTax is backward-looking; brokers don't do tax planning. This gap costs investors thousands per year.
+**Effort:** High
+**Status:** Backlog
+
+**The Problem:**
+- Tax software (TurboTax, H&R Block) only works AFTER the year ends
+- Brokers show gains/losses but don't advise on timing or strategy
+- Investors miss tax-loss harvesting windows, Roth conversion opportunities, and optimal timing
+- Result: Overpaying taxes by $1K-$10K+ annually
+
+**Solution - Year-Round Proactive Tax Intelligence:**
+
+A monitoring system that analyzes your portfolio throughout the year and sends actionable, time-sensitive tax alerts.
+
+**Key Features:**
+
+**1. Tax-Loss Harvesting Alerts (Year-Round)**
+| Scenario | Alert Example |
+|----------|---------------|
+| Significant unrealized loss | "ARKK is down $3,200. Harvest this loss to offset your $4,500 AAPL gain. Net tax savings: ~$800" |
+| Market dip opportunity | "Market dropped 5% today. Your VTI position has a $2,100 harvestable loss. Act within 30 days to avoid wash sale." |
+| Year-end deadline | "⚠️ 15 days until Dec 31. You have $5,400 in unrealized losses to harvest." |
+
+**2. Gain Deferral Strategies**
+| Scenario | Alert Example |
+|----------|---------------|
+| Short-term → Long-term | "NVDA position turns long-term in 45 days. Waiting saves ~$1,200 in taxes (23% → 15% rate)." |
+| Bunching gains | "You've realized $8K in gains this year. Consider deferring the GOOGL sale to next year to stay in 0% LTCG bracket." |
+
+**3. Roth Conversion Opportunities**
+| Scenario | Alert Example |
+|----------|---------------|
+| Low income year | "Your projected income is $45K this year. Consider converting $15K from Traditional to Roth (12% bracket) before Dec 31." |
+| Market dip | "Market is down 15%. Converting $20K now means paying taxes on depressed values - same shares, less tax." |
+| Bracket space | "You have $8,500 of room in the 22% bracket. Fill it with a Roth conversion before year-end?" |
+
+**4. Asset Location Optimization**
+| Scenario | Alert Example |
+|----------|---------------|
+| Tax-inefficient in taxable | "Your SCHD (3.4% yield) is in your taxable account. Move to IRA to save ~$400/year in dividend taxes." |
+| Growth in Roth | "Consider holding QQQ in your Roth IRA - maximum growth, zero taxes ever." |
+
+**5. Estimated Tax Payment Reminders**
+| Scenario | Alert Example |
+|----------|---------------|
+| Q4 payment due | "You've realized $12K in gains. Estimated Q4 payment of ~$1,800 due Jan 15 to avoid penalties." |
+| Withholding check | "Year-end projection: You may owe $3,200. Increase W-4 withholding or make estimated payment." |
+
+**Implementation Architecture:**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   TAX INTELLIGENCE ENGINE                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌─────────────────┐    ┌─────────────────┐                     │
+│  │ 1. PORTFOLIO    │    │ 2. TAX PROFILE  │                     │
+│  │    MONITOR      │    │                 │                     │
+│  │                 │    │ - Filing status │                     │
+│  │ - Track lots    │    │ - Tax bracket   │                     │
+│  │ - Monitor G/L   │    │ - State taxes   │                     │
+│  │ - Watch dates   │    │ - Deductions    │                     │
+│  └────────┬────────┘    └────────┬────────┘                     │
+│           │                      │                               │
+│           ▼                      ▼                               │
+│  ┌─────────────────────────────────────────┐                    │
+│  │         3. OPPORTUNITY DETECTOR          │                    │
+│  │                                          │                    │
+│  │  - Loss harvesting candidates            │                    │
+│  │  - Short→Long term transitions           │                    │
+│  │  - Roth conversion windows               │                    │
+│  │  - Asset location mismatches             │                    │
+│  └────────────────────┬────────────────────┘                    │
+│                       │                                          │
+│                       ▼                                          │
+│  ┌─────────────────────────────────────────┐                    │
+│  │       4. ALERT GENERATOR                 │                    │
+│  │                                          │                    │
+│  │  - Calculate dollar impact               │                    │
+│  │  - Prioritize by savings potential       │                    │
+│  │  - Generate actionable recommendations   │                    │
+│  │  - Track deadlines                       │                    │
+│  └────────────────────┬────────────────────┘                    │
+│                       │                                          │
+│                       ▼                                          │
+│  ┌─────────────────────────────────────────┐                    │
+│  │       5. NOTIFICATION SYSTEM             │                    │
+│  │                                          │                    │
+│  │  - Dashboard alerts                      │                    │
+│  │  - Email notifications (optional)        │                    │
+│  │  - Year-end tax summary                  │                    │
+│  └─────────────────────────────────────────┘                    │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Tax Calendar Integration:**
+
+| Date | Event | System Action |
+|------|-------|---------------|
+| Jan 1 | New tax year | Reset YTD tracking, review prior year missed opportunities |
+| Jan 15 | Q4 estimated payment | Reminder if gains realized |
+| Apr 15 | Q1 estimated payment | Reminder + tax filing deadline |
+| Jun 15 | Q2 estimated payment | Reminder |
+| Sep 15 | Q3 estimated payment | Reminder |
+| Oct 15 | Extended filing deadline | Alert |
+| Nov 1 | 60-day countdown | "Critical window for year-end tax moves" |
+| Dec 1 | 30-day countdown | Urgent harvesting + conversion alerts |
+| Dec 15 | Final harvesting window | Last call for trades to settle by Dec 31 |
+
+**User Tax Profile (Input Required):**
+
+```python
+TAX_PROFILE = {
+    "filing_status": "married_filing_jointly",  # or single, head_of_household
+    "tax_bracket": 24,  # Federal marginal rate %
+    "state": "CA",  # For state tax calculations
+    "state_rate": 9.3,  # State marginal rate %
+    "ltcg_rate": 15,  # Long-term capital gains rate
+    "has_carryover_losses": True,
+    "carryover_amount": 5000,  # From prior years
+    "estimated_income": 180000,  # For bracket calculations
+    "roth_eligible": True,
+    "ira_contribution_room": 7000,
+}
+```
+
+**Dashboard Display - Tax Intelligence Panel:**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 🎯 TAX INTELLIGENCE                           2025 YTD     │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│ REALIZED THIS YEAR:                                         │
+│   Short-term gains:    +$4,200   (taxed as income)         │
+│   Long-term gains:     +$8,500   (15% rate)                │
+│   Harvested losses:    -$2,100                             │
+│   ─────────────────────────────                            │
+│   Net taxable gains:   +$10,600                            │
+│   Estimated tax:       ~$2,350                             │
+│                                                             │
+│ ⚡ OPPORTUNITIES (3 alerts)                                 │
+│                                                             │
+│ 🔴 HIGH PRIORITY - Act by Dec 15                           │
+│    Harvest $3,200 ARKK loss → Save ~$770 in taxes          │
+│    [View Details] [Dismiss]                                │
+│                                                             │
+│ 🟡 MEDIUM - 45 days remaining                              │
+│    NVDA turns long-term on Feb 23 → Save ~$1,200 if wait   │
+│    [View Details] [Dismiss]                                │
+│                                                             │
+│ 🟢 OPTIMIZATION                                             │
+│    Move SCHD to IRA → Save ~$400/year in dividend taxes    │
+│    [View Details] [Dismiss]                                │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Implementation Phases:**
+
+**Phase 1: Tax Profile & Lot Tracking (Foundation)**
+- Add tax profile input UI
+- Parse purchase dates from statements (for holding period)
+- Track realized gains/losses YTD
+- Calculate short-term vs long-term status
+
+**Phase 2: Loss Harvesting Engine**
+- Identify unrealized losses
+- Calculate tax savings potential
+- Wash sale rule checker (31-day window)
+- Generate harvesting alerts
+
+**Phase 3: Holding Period Optimization**
+- Track days until long-term status
+- Alert when approaching 1-year mark
+- Calculate deferral savings
+
+**Phase 4: Roth Conversion Intelligence**
+- Income projection integration
+- Bracket space calculator
+- Conversion opportunity detector
+
+**Phase 5: Notification System**
+- Dashboard alert panel
+- Email digest (optional)
+- Year-end tax summary report
+
+**Files to Create:**
+```
+src/services/tax/
+├── __init__.py
+├── tax_profile.py        # User tax settings
+├── lot_tracker.py        # Purchase lots & holding periods
+├── loss_harvester.py     # Loss harvesting opportunities
+├── gain_optimizer.py     # Holding period & deferral
+├── roth_advisor.py       # Roth conversion analysis
+├── alert_generator.py    # Create actionable alerts
+└── tax_calendar.py       # Deadline tracking
+```
+
+**Competitive Advantage:**
+- TurboTax: Only looks backward at filed returns
+- Brokers: Show data, don't advise on timing
+- Robo-advisors: Auto-harvest but don't explain or optimize
+- **This tool: Proactive, personalized, actionable tax intelligence year-round**
+
+**Potential Tax Savings:**
+| Strategy | Typical Annual Savings |
+|----------|----------------------|
+| Loss harvesting | $500 - $3,000 |
+| Holding period optimization | $200 - $2,000 |
+| Asset location | $300 - $1,500 |
+| Roth conversion timing | $500 - $5,000 |
+| **Total potential** | **$1,500 - $11,500/year** |
+
+---
 
 ### Medium Priority
 
