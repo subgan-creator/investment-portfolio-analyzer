@@ -19,7 +19,16 @@
                     <p class="subtitle">Generated on {{ now().strftime('%B %d, %Y') if now is defined else 'today' }}</p>
                 </div>
                 <div class="header-buttons">
-                    <button id="saveSnapshotBtn" class="btn btn-primary">
+                    <button id="exportPdfBtn" class="btn btn-primary" onclick="exportToPDF()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="12" y1="18" x2="12" y2="12"></line>
+                            <line x1="9" y1="15" x2="15" y2="15"></line>
+                        </svg>
+                        Export PDF
+                    </button>
+                    <button id="saveSnapshotBtn" class="btn btn-secondary">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
                             <polyline points="17 21 17 13 7 13 7 21"></polyline>
@@ -881,6 +890,29 @@
         document.getElementById('saveModal').addEventListener('click', function(e) {
             if (e.target === this) closeModal();
         });
+
+        // Export to PDF function
+        function exportToPDF() {
+            // Add print class to body for print-specific styles
+            document.body.classList.add('printing');
+
+            // Hide elements that shouldn't be in PDF
+            const chatWidget = document.querySelector('.chat-widget');
+            const headerButtons = document.querySelector('.header-buttons');
+
+            if (chatWidget) chatWidget.style.display = 'none';
+            if (headerButtons) headerButtons.style.display = 'none';
+
+            // Trigger browser print dialog (user can save as PDF)
+            window.print();
+
+            // Restore elements after print dialog closes
+            setTimeout(() => {
+                document.body.classList.remove('printing');
+                if (chatWidget) chatWidget.style.display = '';
+                if (headerButtons) headerButtons.style.display = '';
+            }, 1000);
+        }
     </script>
 
     <!-- AI Chat Widget -->

@@ -6,7 +6,7 @@ Provides consistent categorization of portfolio holdings into:
 2. Category Groups - High-level consolidated buckets
 """
 import re
-from typing import Tuple, Dict, List
+from typing import Tuple, Dict, List, Optional
 
 
 # Mapping from various raw labels to standardized labels and category groups
@@ -456,3 +456,228 @@ def get_category_group_colors() -> Dict[str, str]:
         'Cash Equivalents': '#64748b',       # Slate
         'Other': '#9ca3af',                  # Gray
     }
+
+
+# Simplified Asset Allocation Categories
+SIMPLIFIED_ASSET_CLASSES = ['Stocks', 'Bonds', 'Cash', 'REITs', 'Alternatives', 'Commodities', 'Other']
+
+SIMPLIFIED_ASSET_COLORS = {
+    'Stocks': '#3b82f6',       # Blue - primary investment
+    'Bonds': '#10b981',        # Green - fixed income
+    'Cash': '#06b6d4',         # Cyan - cash/money market
+    'REITs': '#f59e0b',        # Amber - real estate
+    'Alternatives': '#ec4899', # Pink - alternatives
+    'Commodities': '#eab308',  # Yellow - commodities
+    'Other': '#64748b',        # Slate - unknown/other
+}
+
+# Target Date Fund Glide Path - estimated stock allocation by target year
+# Based on typical industry glide paths (Vanguard, Fidelity, etc.)
+TARGET_DATE_GLIDE_PATH = {
+    2065: 0.90,  # 90% stocks, 10% bonds
+    2060: 0.90,
+    2055: 0.90,
+    2050: 0.88,
+    2045: 0.85,
+    2040: 0.80,
+    2035: 0.72,
+    2030: 0.65,
+    2025: 0.55,
+    2020: 0.45,
+    2015: 0.35,
+    2010: 0.30,
+}
+
+
+def extract_target_year(fund_name: str) -> Optional[int]:
+    """
+    Extract target year from a target date fund name.
+
+    Examples:
+        "Target Date 2045 Fund" -> 2045
+        "Target Retirement 2030" -> 2030
+        "NH PORTFOLIO 2030" -> 2030
+        "LifePath Index 2055 Fund" -> 2055
+
+    Returns:
+        The target year as int, or None if not found
+    """
+    import re
+    # Look for 4-digit years between 2010 and 2070
+    match = re.search(r'20[1-6][0-9]', fund_name)
+    if match:
+        return int(match.group())
+    return None
+
+
+def get_target_date_allocation(target_year: int) -> Tuple[float, float]:
+    """
+    Get estimated stock/bond allocation for a target date fund.
+
+    Args:
+        target_year: The target retirement year (e.g., 2045)
+
+    Returns:
+        Tuple of (stock_percent, bond_percent) as decimals (e.g., (0.85, 0.15))
+    """
+    # Find the closest year in the glide path
+    if target_year in TARGET_DATE_GLIDE_PATH:
+        stock_pct = TARGET_DATE_GLIDE_PATH[target_year]
+    else:
+        # Interpolate between known years
+        years = sorted(TARGET_DATE_GLIDE_PATH.keys())
+        if target_year > max(years):
+            stock_pct = 0.90  # Very far out = aggressive
+        elif target_year < min(years):
+            stock_pct = 0.30  # Already retired = conservative
+        else:
+            # Find surrounding years and interpolate
+            lower_year = max(y for y in years if y <= target_year)
+            upper_year = min(y for y in years if y >= target_year)
+            if lower_year == upper_year:
+                stock_pct = TARGET_DATE_GLIDE_PATH[lower_year]
+            else:
+                # Linear interpolation
+                lower_pct = TARGET_DATE_GLIDE_PATH[lower_year]
+                upper_pct = TARGET_DATE_GLIDE_PATH[upper_year]
+                ratio = (target_year - lower_year) / (upper_year - lower_year)
+                stock_pct = lower_pct + ratio * (upper_pct - lower_pct)
+
+    bond_pct = 1.0 - stock_pct
+    return (stock_pct, bond_pct)
+
+
+def get_simplified_asset_class(
+    standardized_label: str,
+    category_group: str
+) -> str:
+    """
+    Map a holding to a simplified asset class.
+
+    Maps detailed category groups to: Stocks, Bonds, REITs, Alternatives, Commodities, Other
+
+    Args:
+        standardized_label: The detailed label (e.g., 'US Large Cap Growth')
+        category_group: The category group (e.g., 'Equity: Domestic')
+
+    Returns:
+        Simplified asset class: Stocks, Bonds, REITs, Alternatives, Commodities, or Other
+    """
+    label_lower = standardized_label.lower()
+    group_lower = category_group.lower()
+
+    # Stocks: All equity categories
+    if group_lower in ('equity: domestic', 'equity: international', 'equity: sector'):
+        return 'Stocks'
+
+    # Bonds: All fixed income
+    if group_lower == 'fixed income':
+        return 'Bonds'
+
+    # REITs: Real estate specifically (not commodities)
+    if group_lower == 'real assets':
+        if any(x in label_lower for x in ['reit', 'real estate']):
+            return 'REITs'
+        elif any(x in label_lower for x in ['commodity', 'commodities', 'gold', 'natural resources']):
+            return 'Commodities'
+        # Default real assets to REITs
+        return 'REITs'
+
+    # Alternatives: Crypto, private equity, hedge funds, etc.
+    if group_lower == 'alternatives':
+        return 'Alternatives'
+
+    # Multi-Asset (Target Date Funds): These contain mostly stocks
+    # Typical target date fund allocation:
+    # - 2050+ funds: ~90% stocks, 10% bonds
+    # - 2040 funds: ~85% stocks, 15% bonds
+    # - 2030 funds: ~70% stocks, 30% bonds
+    # - 2020 funds: ~50% stocks, 50% bonds
+    # Since most users have 2030-2050 funds, classify as Stocks (the majority component)
+    if group_lower == 'multi-asset':
+        # Target date funds are primarily stocks
+        return 'Stocks'
+
+    # Cash Equivalents: Separate category for money market, savings, short-term instruments
+    if group_lower == 'cash equivalents':
+        return 'Cash'
+
+    # Default
+    return 'Other'
+
+
+def calculate_simplified_allocation(
+    allocations: List[Dict]
+) -> List[Dict]:
+    """
+    Calculate simplified asset allocation from detailed allocations.
+
+    For Multi-Asset holdings (Target Date Funds), estimates the stock/bond split
+    based on the target year using a typical glide path.
+
+    Args:
+        allocations: List of dicts with 'name', 'value', 'percent', 'category_group'
+
+    Returns:
+        List of simplified allocations: Stocks, Bonds, REITs, Alternatives, Commodities, Other
+    """
+    simplified_totals = {cls: {'value': 0, 'items': []} for cls in SIMPLIFIED_ASSET_CLASSES}
+
+    for item in allocations:
+        label = item.get('name', '')
+        group = item.get('category_group', 'Other')
+        value = item.get('value', 0)
+
+        # Special handling for Multi-Asset (Target Date Funds)
+        # Split their value between Stocks and Bonds based on glide path
+        if group.lower() == 'multi-asset':
+            target_year = extract_target_year(label)
+            if target_year:
+                stock_pct, bond_pct = get_target_date_allocation(target_year)
+                # Split the value
+                stock_value = value * stock_pct
+                bond_value = value * bond_pct
+                simplified_totals['Stocks']['value'] += stock_value
+                simplified_totals['Stocks']['items'].append(f"{label} ({stock_pct*100:.0f}%)")
+                simplified_totals['Bonds']['value'] += bond_value
+                simplified_totals['Bonds']['items'].append(f"{label} ({bond_pct*100:.0f}%)")
+            else:
+                # No target year found - use default 70/30 split (balanced fund assumption)
+                stock_value = value * 0.70
+                bond_value = value * 0.30
+                simplified_totals['Stocks']['value'] += stock_value
+                simplified_totals['Stocks']['items'].append(f"{label} (est. 70%)")
+                simplified_totals['Bonds']['value'] += bond_value
+                simplified_totals['Bonds']['items'].append(f"{label} (est. 30%)")
+            continue
+
+        # Normal classification for non-multi-asset holdings
+        simplified_class = get_simplified_asset_class(label, group)
+        simplified_totals[simplified_class]['value'] += value
+        simplified_totals[simplified_class]['items'].append(label)
+
+    # Calculate total for percentages
+    total_value = sum(data['value'] for data in simplified_totals.values())
+
+    # Build result in order, only include non-zero allocations
+    result = []
+    for asset_class in SIMPLIFIED_ASSET_CLASSES:
+        data = simplified_totals[asset_class]
+        if data['value'] > 0:
+            result.append({
+                'name': asset_class,
+                'value': data['value'],
+                'percent': (data['value'] / total_value * 100) if total_value > 0 else 0,
+                'color': SIMPLIFIED_ASSET_COLORS.get(asset_class, '#9ca3af'),
+                'items': data['items'],
+            })
+
+    # Sort by value descending
+    result.sort(key=lambda x: x['value'], reverse=True)
+
+    return result
+
+
+def get_simplified_asset_colors() -> Dict[str, str]:
+    """Get colors for simplified asset classes."""
+    return SIMPLIFIED_ASSET_COLORS
