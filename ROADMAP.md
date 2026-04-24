@@ -23,6 +23,7 @@
 *None currently*
 
 ### Just Completed
+- [x] Expanded AI Advisor holdings context (Top 10 → Top 25 holdings for better recommendations)
 - [x] Simplified Asset Allocation Display (Stocks, Bonds, REITs, Alternatives, Commodities, Other)
 - [x] Modern UI Redesign (CSS design system, dashboard cards, insight cards)
 - [x] Fixed JPMC Empower PDF multi-line fund name parsing
@@ -775,6 +776,101 @@ src/services/tax/
 | Asset location | $300 - $1,500 |
 | Roth conversion timing | $500 - $5,000 |
 | **Total potential** | **$1,500 - $11,500/year** |
+
+---
+
+#### Client Onboarding Flow
+**Why:** First impressions matter - a guided onboarding experience helps new users understand the app's value and set up their portfolio correctly on first use
+**Effort:** Medium
+**Status:** Backlog
+
+**The Problem:**
+- New users land on the upload page with no context
+- No guidance on what files to upload or what formats are supported
+- Users don't know what insights they'll get after uploading
+- No profile setup (risk tolerance, goals, tax situation) to personalize recommendations
+- Missed opportunity to establish trust and demonstrate value
+
+**Solution - Guided Onboarding Experience:**
+
+**Step 1: Welcome & Value Proposition**
+- Brief intro explaining what the analyzer does
+- Show sample insights/dashboard preview
+- "See your complete financial picture in minutes"
+
+**Step 2: Profile Setup**
+- Investment goals (retirement, growth, income, preservation)
+- Risk tolerance (conservative, moderate, aggressive)
+- Time horizon (short-term, medium, long-term)
+- Age (for age-based allocation recommendations)
+
+**Step 3: Account Connection Guide**
+- Visual guide showing supported brokerages/formats
+- Step-by-step instructions for exporting from each platform
+- "How to download your Fidelity CSV" tutorials
+
+**Step 4: First Upload**
+- Enhanced drag & drop with real-time validation
+- Progress indicator as files are parsed
+- Celebration moment on successful upload
+
+**Step 5: Results Tour**
+- Guided walkthrough of the dashboard
+- Highlight key metrics and what they mean
+- Point out the AI advisor chat feature
+
+**Onboarding State Tracking:**
+```python
+ONBOARDING_STATUS = {
+    "welcome_seen": False,
+    "profile_completed": False,
+    "first_upload_done": False,
+    "results_tour_completed": False,
+    "onboarding_complete": False
+}
+```
+
+**User Profile Data Model:**
+```python
+USER_PROFILE = {
+    "name": "optional",
+    "age": 35,
+    "investment_goals": ["retirement", "growth"],
+    "risk_tolerance": "moderate",  # conservative, moderate, aggressive
+    "time_horizon": "long",  # short (1-3y), medium (3-7y), long (7+y)
+    "tax_filing_status": "married_filing_jointly",
+    "state": "CA",
+    "preferred_brokerages": ["fidelity", "vanguard"]
+}
+```
+
+**Implementation Steps:**
+1. Create onboarding state management (localStorage or SQLite)
+2. Build welcome modal/page component
+3. Create profile setup form with validation
+4. Add brokerage guide pages with screenshots
+5. Implement first-upload celebration animation
+6. Build interactive results tour (tooltips/highlights)
+7. Add "Skip onboarding" option for returning users
+8. Persist profile for personalized recommendations
+
+**Files to Create/Modify:**
+- `src/web/templates/onboarding/` (new directory)
+  - `welcome.html`
+  - `profile.html`
+  - `guide.html`
+  - `tour.html`
+- `src/models/user_profile.py` (new)
+- `src/web/static/js/onboarding.js` (new)
+- `src/web/static/css/onboarding.css` (new)
+- `src/web/app.py` (add onboarding routes)
+- `src/web/templates/upload.html` (integrate onboarding trigger)
+
+**Success Metrics:**
+- Increased first-upload completion rate
+- Reduced drop-off before first analysis
+- Higher engagement with AI advisor (profile context helps)
+- User feedback: "The app was easy to get started with"
 
 ---
 

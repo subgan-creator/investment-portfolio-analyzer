@@ -147,10 +147,10 @@ ANALYSIS SCORES:
             for cat in category_allocation:
                 context += f"- {cat.get('name', 'N/A')}: {cat.get('percent', 0):.1f}% (${cat.get('value', 0):,.0f})\n"
 
-        # Add top holdings
+        # Add top holdings (expanded to 25 for better AI context)
         if top_holdings:
-            context += "\nTOP 10 HOLDINGS (with gain/loss):\n"
-            for h in top_holdings[:10]:
+            context += f"\nTOP {min(len(top_holdings), 25)} HOLDINGS (with gain/loss):\n"
+            for h in top_holdings[:25]:
                 gain_status = "+" if h.get('gain_loss', 0) >= 0 else ""
                 context += f"- {h.get('ticker', 'N/A')} ({h.get('name', '')}): ${h.get('value', 0):,.0f} ({h.get('percent', 0):.1f}%), Gain/Loss: {gain_status}${h.get('gain_loss', 0):,.0f}\n"
 
