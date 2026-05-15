@@ -1,0 +1,61 @@
+{% extends "onboarding/base_onboarding.html" %}
+
+{% block title %}Tax Situation{% endblock %}
+
+{% block content %}
+<div class="onboarding-card">
+    <h2>Tell us about your tax situation (optional)</h2>
+    <p class="subtitle">This helps us give tax-optimized recommendations. You can skip this step.</p>
+
+    <form id="onboarding-form" action="{{ url_for('onboarding_save') }}" method="post">
+        <input type="hidden" name="step" value="10">
+        <input type="hidden" name="next_step" value="complete">
+
+        <div class="form-group">
+            <label for="filing_status">Tax filing status</label>
+            <select id="filing_status" name="filing_status">
+                <option value="">Prefer not to say</option>
+                <option value="single" {% if profile.filing_status == 'single' %}selected{% endif %}>Single</option>
+                <option value="married_joint" {% if profile.filing_status == 'married_joint' %}selected{% endif %}>Married Filing Jointly</option>
+                <option value="married_separate" {% if profile.filing_status == 'married_separate' %}selected{% endif %}>Married Filing Separately</option>
+                <option value="head_household" {% if profile.filing_status == 'head_household' %}selected{% endif %}>Head of Household</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="state">State of residence</label>
+            <select id="state" name="state">
+                <option value="">Prefer not to say</option>
+                {% set states = [
+                    ('AL', 'Alabama'), ('AK', 'Alaska'), ('AZ', 'Arizona'), ('AR', 'Arkansas'),
+                    ('CA', 'California'), ('CO', 'Colorado'), ('CT', 'Connecticut'), ('DE', 'Delaware'),
+                    ('FL', 'Florida'), ('GA', 'Georgia'), ('HI', 'Hawaii'), ('ID', 'Idaho'),
+                    ('IL', 'Illinois'), ('IN', 'Indiana'), ('IA', 'Iowa'), ('KS', 'Kansas'),
+                    ('KY', 'Kentucky'), ('LA', 'Louisiana'), ('ME', 'Maine'), ('MD', 'Maryland'),
+                    ('MA', 'Massachusetts'), ('MI', 'Michigan'), ('MN', 'Minnesota'), ('MS', 'Mississippi'),
+                    ('MO', 'Missouri'), ('MT', 'Montana'), ('NE', 'Nebraska'), ('NV', 'Nevada'),
+                    ('NH', 'New Hampshire'), ('NJ', 'New Jersey'), ('NM', 'New Mexico'), ('NY', 'New York'),
+                    ('NC', 'North Carolina'), ('ND', 'North Dakota'), ('OH', 'Ohio'), ('OK', 'Oklahoma'),
+                    ('OR', 'Oregon'), ('PA', 'Pennsylvania'), ('RI', 'Rhode Island'), ('SC', 'South Carolina'),
+                    ('SD', 'South Dakota'), ('TN', 'Tennessee'), ('TX', 'Texas'), ('UT', 'Utah'),
+                    ('VT', 'Vermont'), ('VA', 'Virginia'), ('WA', 'Washington'), ('WV', 'West Virginia'),
+                    ('WI', 'Wisconsin'), ('WY', 'Wyoming'), ('DC', 'Washington D.C.')
+                ] %}
+                {% for code, name in states %}
+                <option value="{{ code }}" {% if profile.state == code %}selected{% endif %}>{{ name }}</option>
+                {% endfor %}
+            </select>
+            <p class="hint">Some states have no income tax (FL, TX, NV, etc.) which affects tax strategies.</p>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block next_button %}
+<button type="submit" form="onboarding-form" class="btn btn-primary">
+    Complete Setup
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+    </svg>
+</button>
+{% endblock %}

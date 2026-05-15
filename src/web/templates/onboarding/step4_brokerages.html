@@ -1,0 +1,47 @@
+{% extends "onboarding/base_onboarding.html" %}
+
+{% block title %}Brokerages{% endblock %}
+
+{% block content %}
+<div class="onboarding-card">
+    <h2>Which brokerages do you use?</h2>
+    <p class="subtitle">Select all that apply. We'll show relevant upload instructions.</p>
+
+    <form id="onboarding-form" action="{{ url_for('onboarding_save') }}" method="post">
+        <input type="hidden" name="step" value="4">
+        <input type="hidden" name="next_step" value="5">
+
+        <div class="option-grid">
+            {% set brokerage_options = [
+                ('fidelity', 'Fidelity'),
+                ('vanguard', 'Vanguard'),
+                ('schwab', 'Charles Schwab'),
+                ('tdameritrade', 'TD Ameritrade'),
+                ('etrade', 'E*TRADE'),
+                ('robinhood', 'Robinhood'),
+                ('betterment', 'Betterment'),
+                ('wealthfront', 'Wealthfront'),
+                ('merrill', 'Merrill Edge'),
+                ('jpmorgan', 'J.P. Morgan'),
+                ('other', 'Other')
+            ] %}
+
+            {% set selected_brokerages = profile.brokerages if profile.brokerages else [] %}
+
+            {% for value, label in brokerage_options %}
+            <label class="option-card {% if value in selected_brokerages %}selected{% endif %}">
+                <input type="checkbox" name="brokerages" value="{{ value }}" {% if value in selected_brokerages %}checked{% endif %}>
+                <div class="option-content">
+                    <div class="checkmark">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                    </div>
+                    <div class="option-label">{{ label }}</div>
+                </div>
+            </label>
+            {% endfor %}
+        </div>
+    </form>
+</div>
+{% endblock %}

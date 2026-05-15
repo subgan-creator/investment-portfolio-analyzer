@@ -30,16 +30,18 @@ except ImportError:
 class AIAdvisor:
     """AI investment advisor that provides portfolio insights using Claude."""
 
-    def __init__(self, portfolio_data: Optional[Dict[str, Any]] = None):
+    def __init__(self, portfolio_data: Optional[Dict[str, Any]] = None, user_profile: Optional[Dict[str, Any]] = None):
         """
         Initialize the AI advisor.
 
         Args:
             portfolio_data: Dictionary containing portfolio analysis data
+            user_profile: Dictionary containing user profile from onboarding
         """
         self.client = Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
         self.model = "claude-sonnet-4-20250514"
         self.portfolio_data = portfolio_data or {}
+        self.user_profile = user_profile or {}
 
     def build_system_prompt(self) -> str:
         """Build the system prompt with portfolio context."""
@@ -182,6 +184,12 @@ ANALYSIS SCORES:
 
         context += "\n=== END PORTFOLIO DATA ===\n"
 
+        # Add user profile context if available
+        if self.user_profile:
+            profile_context = self._build_profile_context()
+            if profile_context:
+                context += "\n" + profile_context + "\n"
+
         # Add semantic intelligence layer
         semantic_context = ""
         if build_semantic_context and self.portfolio_data:
@@ -193,9 +201,87 @@ ANALYSIS SCORES:
                 semantic_context = ""
 
         context += semantic_context
-        context += "\nUse the above data and semantic intelligence to give specific, personalized recommendations. Do NOT ask the user for portfolio information - you already have it.\n"
+        context += "\nUse the above data, user profile, and semantic intelligence to give specific, personalized recommendations. Do NOT ask the user for portfolio information - you already have it.\n"
 
         return base_prompt + context
+
+    def _build_profile_context(self) -> str:
+        """Build user profile context for the system prompt."""
+        if not self.user_profile:
+            return ""
+
+        parts = ["=== USER PROFILE (from onboarding) ==="]
+
+        name = self.user_profile.get('name')
+        if name:
+            parts.append(f"Name: {name}")
+
+        risk_tolerance = self.user_profile.get('risk_tolerance')
+        if risk_tolerance:
+            risk_labels = {
+                'conservative': 'Conservative (prefers stability, accepts lower returns)',
+                'moderate': 'Moderate (balanced approach between growth and stability)',
+                'aggressive': 'Aggressive (maximizes growth, accepts higher volatility)'
+            }
+            parts.append(f"Risk Tolerance: {risk_labels.get(risk_tolerance, risk_tolerance)}")
+
+        primary_goal = self.user_profile.get('primary_goal')
+        if primary_goal:
+            goal_labels = {
+                'retirement': 'Retirement savings',
+                'growth': 'Wealth growth',
+                'income': 'Income generation',
+                'preservation': 'Capital preservation',
+                'purchase': 'Saving for a major purchase'
+            }
+            parts.append(f"Primary Goal: {goal_labels.get(primary_goal, primary_goal)}")
+
+        time_horizon = self.user_profile.get('time_horizon')
+        if time_horizon:
+            horizon_labels = {
+                'short': 'Short-term (1-3 years)',
+                'medium': 'Medium-term (3-7 years)',
+                'long': 'Long-term (7-15 years)',
+                'very_long': 'Very long-term (15+ years)'
+            }
+            parts.append(f"Time Horizon: {horizon_labels.get(time_horizon, time_horizon)}")
+
+        age = self.user_profile.get('age')
+        if age:
+            parts.append(f"Age: {age}")
+
+        target_year = self.user_profile.get('target_retirement_year')
+        if target_year:
+            parts.append(f"Target Retirement Year: {target_year}")
+
+        portfolio_size = self.user_profile.get('portfolio_size_range')
+        if portfolio_size:
+            size_labels = {
+                'under_25k': 'Under $25,000',
+                '25k_100k': '$25,000 - $100,000',
+                '100k_500k': '$100,000 - $500,000',
+                '500k_1m': '$500,000 - $1,000,000',
+                'over_1m': 'Over $1,000,000'
+            }
+            parts.append(f"Portfolio Size Range: {size_labels.get(portfolio_size, portfolio_size)}")
+
+        account_types = self.user_profile.get('account_types', [])
+        if account_types:
+            parts.append(f"Account Types: {', '.join(account_types)}")
+
+        filing_status = self.user_profile.get('filing_status')
+        if filing_status:
+            parts.append(f"Tax Filing Status: {filing_status.replace('_', ' ').title()}")
+
+        state = self.user_profile.get('state')
+        if state:
+            parts.append(f"State: {state}")
+
+        parts.append("=== END USER PROFILE ===")
+        parts.append("")
+        parts.append("IMPORTANT: Tailor your recommendations to match the user's risk tolerance, time horizon, and investment goals as specified above.")
+
+        return "\n".join(parts)
 
     def get_response(self, messages: List[Dict[str, str]]) -> str:
         """

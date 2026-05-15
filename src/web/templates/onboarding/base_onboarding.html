@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Setup{% endblock %} - Investment Portfolio Analyzer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/onboarding.css') }}">
+</head>
+<body class="onboarding-body">
+    <div class="onboarding-container">
+        <!-- Header -->
+        <header class="onboarding-header">
+            <a href="{{ url_for('index') }}" class="logo">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                </svg>
+                Portfolio Analyzer
+            </a>
+            {% if step is defined and step > 1 %}
+            <a href="{{ url_for('onboarding_skip') }}" class="skip-link">Skip for now</a>
+            {% endif %}
+        </header>
+
+        <!-- Progress Bar -->
+        {% if step is defined and total_steps is defined %}
+        <div class="progress-container">
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: {{ (step / total_steps) * 100 }}%"></div>
+            </div>
+            <span class="progress-text">Step {{ step }} of {{ total_steps }}</span>
+        </div>
+        {% endif %}
+
+        <!-- Main Content -->
+        <main class="onboarding-main">
+            {% block content %}{% endblock %}
+        </main>
+
+        <!-- Navigation -->
+        <nav class="onboarding-nav">
+            {% block navigation %}
+            <div class="nav-buttons">
+                {% if step is defined and step > 1 %}
+                <a href="{{ url_for('onboarding_step', step=step-1) }}" class="btn btn-secondary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                    Back
+                </a>
+                {% else %}
+                <div></div>
+                {% endif %}
+
+                {% block next_button %}
+                <button type="submit" form="onboarding-form" class="btn btn-primary">
+                    Next
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                </button>
+                {% endblock %}
+            </div>
+            {% endblock %}
+        </nav>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/onboarding.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

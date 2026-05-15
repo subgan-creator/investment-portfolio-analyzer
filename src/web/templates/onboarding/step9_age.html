@@ -1,0 +1,36 @@
+{% extends "onboarding/base_onboarding.html" %}
+
+{% block title %}Age{% endblock %}
+
+{% block content %}
+<div class="onboarding-card">
+    <h2>What's your age or target retirement year?</h2>
+    <p class="subtitle">This helps us suggest appropriate asset allocations for your life stage.</p>
+
+    <form id="onboarding-form" action="{{ url_for('onboarding_save') }}" method="post">
+        <input type="hidden" name="step" value="9">
+        <input type="hidden" name="next_step" value="10">
+
+        <div class="age-input-group">
+            <div class="form-group">
+                <label for="age">Your age</label>
+                <input type="number" id="age" name="age" placeholder="e.g., 35" min="18" max="100" value="{{ profile.age or '' }}">
+            </div>
+
+            <div class="or-divider">or</div>
+
+            <div class="form-group">
+                <label for="target_retirement_year">Target retirement year</label>
+                <select id="target_retirement_year" name="target_retirement_year">
+                    <option value="">Select year...</option>
+                    {% for year in range(2025, 2071, 5) %}
+                    <option value="{{ year }}" {% if profile.target_retirement_year == year %}selected{% endif %}>{{ year }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <p class="hint" style="margin-top: 1rem;">We use this to recommend age-appropriate allocations (e.g., more bonds as you approach retirement).</p>
+    </form>
+</div>
+{% endblock %}

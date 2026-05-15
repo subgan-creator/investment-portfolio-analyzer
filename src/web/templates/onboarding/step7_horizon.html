@@ -1,0 +1,41 @@
+{% extends "onboarding/base_onboarding.html" %}
+
+{% block title %}Time Horizon{% endblock %}
+
+{% block content %}
+<div class="onboarding-card">
+    <h2>What's your investment time horizon?</h2>
+    <p class="subtitle">How long before you need to access these funds?</p>
+
+    <form id="onboarding-form" action="{{ url_for('onboarding_save') }}" method="post">
+        <input type="hidden" name="step" value="7">
+        <input type="hidden" name="next_step" value="8">
+
+        <div class="option-grid single-column">
+            {% set horizon_options = [
+                ('short', 'Short-term (1-3 years)', 'Need funds relatively soon'),
+                ('medium', 'Medium-term (3-7 years)', 'Planning ahead but not too far'),
+                ('long', 'Long-term (7-15 years)', 'Building for the future'),
+                ('very_long', 'Very long-term (15+ years)', 'Decades of growth potential')
+            ] %}
+
+            {% for value, label, description in horizon_options %}
+            <label class="option-card radio {% if profile.time_horizon == value %}selected{% endif %}">
+                <input type="radio" name="time_horizon" value="{{ value }}" {% if profile.time_horizon == value %}checked{% endif %}>
+                <div class="option-content">
+                    <div class="checkmark">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="5" fill="currentColor"></circle>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="option-label">{{ label }}</div>
+                        <div class="option-description">{{ description }}</div>
+                    </div>
+                </div>
+            </label>
+            {% endfor %}
+        </div>
+    </form>
+</div>
+{% endblock %}

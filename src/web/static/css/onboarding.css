@@ -1,0 +1,392 @@
+/* Onboarding Flow Styles */
+
+/* Layout */
+.onboarding-body {
+    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 2rem 1rem;
+}
+
+.onboarding-container {
+    width: 100%;
+    max-width: 600px;
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100vh - 4rem);
+}
+
+/* Header */
+.onboarding-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.onboarding-header .logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 1.125rem;
+    color: var(--text-primary);
+    text-decoration: none;
+}
+
+.onboarding-header .logo svg {
+    color: var(--primary);
+}
+
+.skip-link {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.875rem;
+    transition: color 0.2s;
+}
+
+.skip-link:hover {
+    color: var(--primary);
+}
+
+/* Progress Bar */
+.progress-container {
+    margin-bottom: 2rem;
+}
+
+.progress-bar {
+    height: 6px;
+    background: var(--border-color);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    display: block;
+    text-align: center;
+    margin-top: 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+}
+
+/* Main Content */
+.onboarding-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.onboarding-card {
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    padding: 2.5rem;
+    box-shadow: var(--shadow-md);
+}
+
+.onboarding-card h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.75rem;
+    line-height: 1.3;
+}
+
+.onboarding-card h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.onboarding-card .subtitle {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    margin-bottom: 2rem;
+    line-height: 1.5;
+}
+
+/* Welcome Step Specific */
+.welcome-features {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 2rem 0;
+}
+
+.welcome-feature {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.welcome-feature .icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    background: var(--primary-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.welcome-feature .icon svg {
+    width: 20px;
+    height: 20px;
+    color: var(--primary);
+}
+
+.welcome-feature .text h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.welcome-feature .text p {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+/* Input Fields */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group select {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: 1rem;
+    color: var(--text-primary);
+    background: var(--bg-primary);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.form-group .hint {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+}
+
+/* Option Cards (for multi-select and single-select) */
+.option-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+.option-grid.single-column {
+    grid-template-columns: 1fr;
+}
+
+.option-card {
+    position: relative;
+    background: var(--bg-primary);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.option-card:hover {
+    border-color: var(--primary-light);
+    background: var(--bg-secondary);
+}
+
+.option-card.selected {
+    border-color: var(--primary);
+    background: var(--primary-light);
+}
+
+.option-card input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.option-card .option-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.option-card .checkmark {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border-color);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+}
+
+.option-card.radio .checkmark {
+    border-radius: 50%;
+}
+
+.option-card.selected .checkmark {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+.option-card .checkmark svg {
+    width: 14px;
+    height: 14px;
+    color: white;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.option-card.selected .checkmark svg {
+    opacity: 1;
+}
+
+.option-card .option-label {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.option-card .option-description {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+}
+
+/* Navigation */
+.onboarding-nav {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.nav-buttons {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nav-buttons .btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.nav-buttons .btn-secondary {
+    background: transparent;
+    border: 1px solid var(--border-color);
+}
+
+.nav-buttons .btn-secondary:hover {
+    background: var(--bg-secondary);
+}
+
+/* Complete Step */
+.complete-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: var(--success-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+}
+
+.complete-icon svg {
+    width: 40px;
+    height: 40px;
+    color: var(--success);
+}
+
+.onboarding-card.complete {
+    text-align: center;
+}
+
+.onboarding-card.complete h1 {
+    margin-bottom: 1rem;
+}
+
+.onboarding-card.complete .subtitle {
+    margin-bottom: 2rem;
+}
+
+/* Age Input Group */
+.age-input-group {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+}
+
+.age-input-group .form-group {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+.age-input-group .or-divider {
+    padding-bottom: 0.875rem;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .onboarding-body {
+        padding: 1rem;
+    }
+
+    .onboarding-card {
+        padding: 1.5rem;
+    }
+
+    .onboarding-card h1 {
+        font-size: 1.5rem;
+    }
+
+    .option-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .age-input-group {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .age-input-group .or-divider {
+        padding: 0;
+        text-align: center;
+    }
+}

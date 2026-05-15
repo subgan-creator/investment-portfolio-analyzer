@@ -1,0 +1,21 @@
+{% extends "onboarding/base_onboarding.html" %}
+
+{% block title %}Your Name{% endblock %}
+
+{% block content %}
+<div class="onboarding-card">
+    <h2>How should we address you?</h2>
+    <p class="subtitle">This helps personalize your experience. You can skip this if you prefer.</p>
+
+    <form id="onboarding-form" action="{{ url_for('onboarding_save') }}" method="post">
+        <input type="hidden" name="step" value="2">
+        <input type="hidden" name="next_step" value="3">
+
+        <div class="form-group">
+            <label for="name">First name (optional)</label>
+            <input type="text" id="name" name="name" placeholder="Enter your first name" value="{{ profile.name or '' }}" autocomplete="given-name">
+            <p class="hint">We'll use this to greet you and in our AI recommendations.</p>
+        </div>
+    </form>
+</div>
+{% endblock %}

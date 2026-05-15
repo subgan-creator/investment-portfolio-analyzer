@@ -1,0 +1,42 @@
+{% extends "onboarding/base_onboarding.html" %}
+
+{% block title %}Investment Goal{% endblock %}
+
+{% block content %}
+<div class="onboarding-card">
+    <h2>What's your primary investment goal?</h2>
+    <p class="subtitle">This shapes the type of recommendations we'll provide.</p>
+
+    <form id="onboarding-form" action="{{ url_for('onboarding_save') }}" method="post">
+        <input type="hidden" name="step" value="6">
+        <input type="hidden" name="next_step" value="7">
+
+        <div class="option-grid single-column">
+            {% set goal_options = [
+                ('retirement', 'Retirement Savings', 'Building wealth for retirement'),
+                ('growth', 'Wealth Growth', 'Maximize long-term returns'),
+                ('income', 'Income Generation', 'Generate regular dividend/interest income'),
+                ('preservation', 'Capital Preservation', 'Protect existing wealth'),
+                ('purchase', 'Major Purchase', 'Saving for home, education, etc.')
+            ] %}
+
+            {% for value, label, description in goal_options %}
+            <label class="option-card radio {% if profile.primary_goal == value %}selected{% endif %}">
+                <input type="radio" name="primary_goal" value="{{ value }}" {% if profile.primary_goal == value %}checked{% endif %}>
+                <div class="option-content">
+                    <div class="checkmark">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="5" fill="currentColor"></circle>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="option-label">{{ label }}</div>
+                        <div class="option-description">{{ description }}</div>
+                    </div>
+                </div>
+            </label>
+            {% endfor %}
+        </div>
+    </form>
+</div>
+{% endblock %}

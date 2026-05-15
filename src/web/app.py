@@ -33,6 +33,11 @@ from src.models.fund_profile import (
     get_fund_profile_by_id, delete_fund_profile, get_fund_profiles_summary,
     find_matching_profile
 )
+from src.models.user_profile import (
+    init_user_profile_db, get_or_create_profile, get_profile, update_profile,
+    is_onboarding_complete, mark_onboarding_complete, get_profile_for_ai,
+    get_profile_ai_context
+)
 from src.services.ai_advisor import AIAdvisor, is_api_configured
 from src.services.fund_matcher import (
     get_look_through_summary, calculate_look_through_allocation,
@@ -61,6 +66,7 @@ ALLOWED_EXTENSIONS = {'csv', 'pdf'}
 init_db()
 init_chat_db()
 init_fund_profiles_db()
+init_user_profile_db()
 
 # Ticker information database - full names and descriptions
 TICKER_INFO = {
@@ -284,9 +290,26 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+def get_or_create_session_id():
+    """Get or create a session ID for the current user."""
+    if 'user_session_id' not in session:
+        session['user_session_id'] = str(uuid.uuid4())[:16]
+    return session['user_session_id']
+
+
 @app.route('/')
 def index():
-    """Home page with file upload"""
+    """Home page with file upload - redirects to onboarding if not complete"""
+    session_id = get_or_create_session_id()
+
+    # Check if user has completed onboarding
+    if not is_onboarding_complete(session_id):
+        profile = get_profile(session_id)
+        if profile and profile.current_step > 1:
+            # Resume where they left off
+            return redirect(url_for('onboarding_step', step=profile.current_step))
+        return redirect(url_for('onboarding_step', step=1))
+
     return render_template('index.html')
 
 
@@ -871,6 +894,162 @@ def api_analyze():
     pass
 
 
+# ==================== ONBOARDING ROUTES ====================
+
+TOTAL_ONBOARDING_STEPS = 10
+
+@app.route('/onboarding')
+def onboarding():
+    """Redirect to current onboarding step or start (allows re-editing profile)."""
+    session_id = get_or_create_session_id()
+    profile = get_or_create_profile(session_id)
+
+    # If onboarding completed, start from step 2 (skip welcome) for editing
+    if profile.onboarding_completed:
+        return redirect(url_for('onboarding_step', step=2))
+
+    return redirect(url_for('onboarding_step', step=profile.current_step or 1))
+
+
+@app.route('/onboarding/step/<int:step>')
+def onboarding_step(step):
+    """Display a specific onboarding step."""
+    session_id = get_or_create_session_id()
+    profile = get_or_create_profile(session_id)
+
+    # Validate step number
+    if step < 1 or step > TOTAL_ONBOARDING_STEPS:
+        return redirect(url_for('onboarding_step', step=1))
+
+    # Get profile data as dict for template
+    profile_data = profile.to_dict()
+
+    # Map step to template
+    step_templates = {
+        1: 'onboarding/step1_welcome.html',
+        2: 'onboarding/step2_name.html',
+        3: 'onboarding/step3_accounts.html',
+        4: 'onboarding/step4_brokerages.html',
+        5: 'onboarding/step5_portfolio_size.html',
+        6: 'onboarding/step6_goal.html',
+        7: 'onboarding/step7_horizon.html',
+        8: 'onboarding/step8_risk.html',
+        9: 'onboarding/step9_age.html',
+        10: 'onboarding/step10_tax.html',
+    }
+
+    template = step_templates.get(step, 'onboarding/step1_welcome.html')
+
+    return render_template(template,
+                           step=step,
+                           total_steps=TOTAL_ONBOARDING_STEPS,
+                           profile=profile_data)
+
+
+@app.route('/onboarding/save', methods=['POST'])
+def onboarding_save():
+    """Save onboarding step data and redirect to next step."""
+    session_id = get_or_create_session_id()
+
+    step = int(request.form.get('step', 1))
+    next_step = request.form.get('next_step', str(step + 1))
+
+    # Collect form data based on step
+    update_data = {'current_step': step + 1}
+
+    if step == 2:
+        # Name step
+        update_data['name'] = request.form.get('name', '').strip() or None
+
+    elif step == 3:
+        # Account types (multi-select)
+        account_types = request.form.getlist('account_types')
+        update_data['account_types'] = account_types
+
+    elif step == 4:
+        # Brokerages (multi-select)
+        brokerages = request.form.getlist('brokerages')
+        update_data['brokerages'] = brokerages
+
+    elif step == 5:
+        # Portfolio size
+        update_data['portfolio_size_range'] = request.form.get('portfolio_size_range')
+
+    elif step == 6:
+        # Primary goal
+        update_data['primary_goal'] = request.form.get('primary_goal')
+
+    elif step == 7:
+        # Time horizon
+        update_data['time_horizon'] = request.form.get('time_horizon')
+
+    elif step == 8:
+        # Risk tolerance
+        update_data['risk_tolerance'] = request.form.get('risk_tolerance')
+
+    elif step == 9:
+        # Age / retirement year
+        age = request.form.get('age')
+        if age:
+            update_data['age'] = int(age)
+        retirement_year = request.form.get('target_retirement_year')
+        if retirement_year:
+            update_data['target_retirement_year'] = int(retirement_year)
+
+    elif step == 10:
+        # Tax info
+        update_data['filing_status'] = request.form.get('filing_status') or None
+        update_data['state'] = request.form.get('state') or None
+
+    # Save the data
+    update_profile(session_id, **update_data)
+
+    # Redirect to next step or complete
+    if next_step == 'complete':
+        mark_onboarding_complete(session_id)
+        return redirect(url_for('onboarding_complete'))
+
+    return redirect(url_for('onboarding_step', step=int(next_step)))
+
+
+@app.route('/onboarding/complete')
+def onboarding_complete():
+    """Show onboarding completion page."""
+    session_id = get_or_create_session_id()
+    profile = get_profile(session_id)
+
+    if not profile:
+        return redirect(url_for('onboarding_step', step=1))
+
+    profile_data = profile.to_dict()
+
+    return render_template('onboarding/complete.html',
+                           profile=profile_data)
+
+
+@app.route('/onboarding/skip', methods=['GET', 'POST'])
+def onboarding_skip():
+    """Skip onboarding and go to main app."""
+    session_id = get_or_create_session_id()
+    mark_onboarding_complete(session_id)
+    return redirect(url_for('index'))
+
+
+@app.route('/api/profile')
+def api_profile():
+    """Get current user profile as JSON."""
+    session_id = get_or_create_session_id()
+    profile = get_profile(session_id)
+
+    if not profile:
+        return jsonify({'exists': False})
+
+    return jsonify({
+        'exists': True,
+        'profile': profile.to_dict()
+    })
+
+
 # ==================== HISTORY & SNAPSHOT ROUTES ====================
 
 @app.route('/history')
@@ -1025,8 +1204,12 @@ def send_chat_message():
         # Get conversation history
         conversation = get_messages_for_api(session_id)
 
+        # Get user profile for personalized recommendations
+        user_session_id = get_or_create_session_id()
+        user_profile = get_profile_for_ai(user_session_id)
+
         # Get AI response
-        advisor = AIAdvisor(portfolio_data)
+        advisor = AIAdvisor(portfolio_data, user_profile)
         ai_response = advisor.get_response(conversation)
 
         # Save AI response
@@ -1077,8 +1260,12 @@ def get_recommendations():
         data = request.get_json() or {}
         portfolio_data = data.get('portfolio_data', {})
 
-        # Create advisor with portfolio context
-        advisor = AIAdvisor(portfolio_data)
+        # Get user profile for personalized recommendations
+        user_session_id = get_or_create_session_id()
+        user_profile = get_profile_for_ai(user_session_id)
+
+        # Create advisor with portfolio context and user profile
+        advisor = AIAdvisor(portfolio_data, user_profile)
 
         # Get specific recommendations using the enhanced directive prompt
         recommendations = advisor.get_specific_recommendations()

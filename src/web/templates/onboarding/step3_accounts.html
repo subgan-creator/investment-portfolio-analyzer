@@ -1,0 +1,46 @@
+{% extends "onboarding/base_onboarding.html" %}
+
+{% block title %}Account Types{% endblock %}
+
+{% block content %}
+<div class="onboarding-card">
+    <h2>What types of investment accounts do you have?</h2>
+    <p class="subtitle">Select all that apply. This helps us give tax-aware recommendations.</p>
+
+    <form id="onboarding-form" action="{{ url_for('onboarding_save') }}" method="post">
+        <input type="hidden" name="step" value="3">
+        <input type="hidden" name="next_step" value="4">
+
+        <div class="option-grid">
+            {% set account_options = [
+                ('401k', '401(k) / 403(b)', 'Employer-sponsored retirement'),
+                ('traditional_ira', 'Traditional IRA', 'Tax-deferred retirement'),
+                ('roth_ira', 'Roth IRA', 'Tax-free retirement'),
+                ('taxable', 'Taxable Brokerage', 'Individual/joint account'),
+                ('hsa', 'HSA', 'Health Savings Account'),
+                ('529', '529 Plan', 'Education savings'),
+                ('other', 'Other', 'Other account types')
+            ] %}
+
+            {% set selected_accounts = profile.account_types if profile.account_types else [] %}
+
+            {% for value, label, description in account_options %}
+            <label class="option-card {% if value in selected_accounts %}selected{% endif %}">
+                <input type="checkbox" name="account_types" value="{{ value }}" {% if value in selected_accounts %}checked{% endif %}>
+                <div class="option-content">
+                    <div class="checkmark">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="option-label">{{ label }}</div>
+                        <div class="option-description">{{ description }}</div>
+                    </div>
+                </div>
+            </label>
+            {% endfor %}
+        </div>
+    </form>
+</div>
+{% endblock %}

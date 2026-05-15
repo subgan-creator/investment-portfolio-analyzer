@@ -1,0 +1,76 @@
+{% extends "onboarding/base_onboarding.html" %}
+
+{% block title %}Setup Complete{% endblock %}
+
+{% block content %}
+<div class="onboarding-card complete">
+    <div class="complete-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+    </div>
+
+    <h1>You're all set{% if profile.name %}, {{ profile.name }}{% endif %}!</h1>
+    <p class="subtitle">Your profile is ready. Now let's analyze your portfolio and give you personalized insights.</p>
+
+    <div class="welcome-features" style="text-align: left; max-width: 400px; margin: 2rem auto;">
+        {% if profile.risk_tolerance %}
+        <div class="welcome-feature">
+            <div class="icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+            </div>
+            <div class="text">
+                <h3>Risk Profile</h3>
+                <p>{{ profile.risk_tolerance | capitalize }} investor</p>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if profile.primary_goal %}
+        <div class="welcome-feature">
+            <div class="icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <circle cx="12" cy="12" r="6"></circle>
+                    <circle cx="12" cy="12" r="2"></circle>
+                </svg>
+            </div>
+            <div class="text">
+                <h3>Goal</h3>
+                <p>{% if profile.primary_goal == 'retirement' %}Retirement savings{% elif profile.primary_goal == 'growth' %}Wealth growth{% elif profile.primary_goal == 'income' %}Income generation{% elif profile.primary_goal == 'preservation' %}Capital preservation{% else %}{{ profile.primary_goal | capitalize }}{% endif %}</p>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if profile.time_horizon %}
+        <div class="welcome-feature">
+            <div class="icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+            </div>
+            <div class="text">
+                <h3>Time Horizon</h3>
+                <p>{% if profile.time_horizon == 'short' %}1-3 years{% elif profile.time_horizon == 'medium' %}3-7 years{% elif profile.time_horizon == 'long' %}7-15 years{% elif profile.time_horizon == 'very_long' %}15+ years{% else %}{{ profile.time_horizon }}{% endif %}</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block navigation %}
+<div class="nav-buttons" style="justify-content: center;">
+    <a href="{{ url_for('index') }}" class="btn btn-primary btn-lg">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
+        Upload Your Statements
+    </a>
+</div>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends "onboarding/base_onboarding.html" %}
+
+{% block title %}Welcome{% endblock %}
+
+{% block content %}
+<div class="onboarding-card">
+    <h1>Welcome to Portfolio Analyzer</h1>
+    <p class="subtitle">Let's personalize your experience. We'll ask a few questions to tailor our insights and recommendations to your investment goals.</p>
+
+    <div class="welcome-features">
+        <div class="welcome-feature">
+            <div class="icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 20V10"></path>
+                    <path d="M18 20V4"></path>
+                    <path d="M6 20v-4"></path>
+                </svg>
+            </div>
+            <div class="text">
+                <h3>Personalized Analysis</h3>
+                <p>Get insights tailored to your risk tolerance and investment goals</p>
+            </div>
+        </div>
+
+        <div class="welcome-feature">
+            <div class="icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+            </div>
+            <div class="text">
+                <h3>Smarter AI Advisor</h3>
+                <p>Our AI advisor will understand your situation and give relevant recommendations</p>
+            </div>
+        </div>
+
+        <div class="welcome-feature">
+            <div class="icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+            </div>
+            <div class="text">
+                <h3>Private & Secure</h3>
+                <p>Your profile stays on this device. No data is shared externally.</p>
+            </div>
+        </div>
+    </div>
+
+    <p style="font-size: 0.875rem; color: var(--text-secondary);">This takes about 2 minutes. You can skip and come back anytime.</p>
+</div>
+
+<form id="onboarding-form" action="{{ url_for('onboarding_step', step=2) }}" method="get" style="display: none;"></form>
+{% endblock %}
+
+{% block next_button %}
+<a href="{{ url_for('onboarding_step', step=2) }}" class="btn btn-primary">
+    Get Started
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+</a>
+{% endblock %}

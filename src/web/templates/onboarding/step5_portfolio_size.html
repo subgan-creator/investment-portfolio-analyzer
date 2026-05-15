@@ -1,0 +1,42 @@
+{% extends "onboarding/base_onboarding.html" %}
+
+{% block title %}Portfolio Size{% endblock %}
+
+{% block content %}
+<div class="onboarding-card">
+    <h2>What's your approximate total portfolio size?</h2>
+    <p class="subtitle">This helps us calibrate our recommendations. Your actual data remains private.</p>
+
+    <form id="onboarding-form" action="{{ url_for('onboarding_save') }}" method="post">
+        <input type="hidden" name="step" value="5">
+        <input type="hidden" name="next_step" value="6">
+
+        <div class="option-grid single-column">
+            {% set size_options = [
+                ('under_25k', 'Under $25,000', 'Building your foundation'),
+                ('25k_100k', '$25,000 - $100,000', 'Growing steadily'),
+                ('100k_500k', '$100,000 - $500,000', 'Solid portfolio'),
+                ('500k_1m', '$500,000 - $1,000,000', 'Substantial assets'),
+                ('over_1m', 'Over $1,000,000', 'High net worth')
+            ] %}
+
+            {% for value, label, description in size_options %}
+            <label class="option-card radio {% if profile.portfolio_size_range == value %}selected{% endif %}">
+                <input type="radio" name="portfolio_size_range" value="{{ value }}" {% if profile.portfolio_size_range == value %}checked{% endif %}>
+                <div class="option-content">
+                    <div class="checkmark">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="5" fill="currentColor"></circle>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="option-label">{{ label }}</div>
+                        <div class="option-description">{{ description }}</div>
+                    </div>
+                </div>
+            </label>
+            {% endfor %}
+        </div>
+    </form>
+</div>
+{% endblock %}
