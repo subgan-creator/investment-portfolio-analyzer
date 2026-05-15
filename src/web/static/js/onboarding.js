@@ -15,45 +15,54 @@ function initOptionCards() {
     const optionCards = document.querySelectorAll('.option-card');
 
     optionCards.forEach(card => {
-        card.addEventListener('click', function(e) {
-            // Don't trigger if clicking directly on input
-            if (e.target.tagName === 'INPUT') return;
+        const input = card.querySelector('input');
+        if (!input) return;
 
-            const input = this.querySelector('input');
-            if (!input) return;
+        // For labels, the click on the label will toggle the input automatically
+        // We just need to update the visual state
 
-            if (input.type === 'checkbox') {
-                // Toggle checkbox
-                input.checked = !input.checked;
-                this.classList.toggle('selected', input.checked);
-            } else if (input.type === 'radio') {
-                // Deselect all siblings first
-                const name = input.name;
+        // Listen for changes on the input (triggered by label click or direct click)
+        input.addEventListener('change', function() {
+            if (this.type === 'checkbox') {
+                card.classList.toggle('selected', this.checked);
+            } else if (this.type === 'radio') {
+                // Deselect all siblings
+                const name = this.name;
                 document.querySelectorAll(`input[name="${name}"]`).forEach(radio => {
-                    radio.closest('.option-card').classList.remove('selected');
+                    const parentCard = radio.closest('.option-card');
+                    if (parentCard) {
+                        parentCard.classList.remove('selected');
+                    }
                 });
-
-                // Select this one
-                input.checked = true;
-                this.classList.add('selected');
+                card.classList.add('selected');
             }
         });
 
-        // Also handle direct input changes
-        const input = card.querySelector('input');
-        if (input) {
-            input.addEventListener('change', function() {
-                if (this.type === 'checkbox') {
-                    card.classList.toggle('selected', this.checked);
-                } else if (this.type === 'radio') {
-                    // Deselect all siblings
-                    const name = this.name;
-                    document.querySelectorAll(`input[name="${name}"]`).forEach(radio => {
-                        radio.closest('.option-card').classList.remove('selected');
-                    });
-                    card.classList.add('selected');
-                }
-            });
+        // Also handle click on the card for areas not covered by the label
+        card.addEventListener('click', function(e) {
+            // If the click target is the input itself, let the native behavior handle it
+            if (e.target === input) return;
+
+            // If the click is on a label element (or inside one), the input change will fire
+            // Check if we clicked on something that will trigger the input anyway
+            if (e.target.tagName === 'LABEL' || e.target.closest('label')) return;
+
+            // For clicks on other parts of the card, manually toggle
+            if (input.type === 'checkbox') {
+                input.checked = !input.checked;
+                input.dispatchEvent(new Event('change'));
+            } else if (input.type === 'radio') {
+                input.checked = true;
+                input.dispatchEvent(new Event('change'));
+            }
+        });
+    });
+
+    // Initialize selected state on page load
+    document.querySelectorAll('.option-card input:checked').forEach(input => {
+        const card = input.closest('.option-card');
+        if (card) {
+            card.classList.add('selected');
         }
     });
 }
