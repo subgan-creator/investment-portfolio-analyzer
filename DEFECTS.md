@@ -322,6 +322,59 @@ max_requests = 100    # Restart worker every 100 requests to free memory
 
 ---
 
+### DEF-005: Betterment Cash Reserve Account Not Recognized
+
+**Date Found:** September 26, 2026
+**Severity:** High
+**Status:** Resolved
+
+**Symptoms:**
+- Uploading a Betterment monthly statement skips the Cash Reserve account entirely
+- Only investing accounts (Taxable, Education, etc.) appear in the analysis
+- Cash Reserve balance (e.g. $188,133) is silently dropped from portfolio total
+
+**Root Cause:**
+The second-pass regex that extracts the Cash Reserve ending balance used `Ending Balance` (capital B):
+```python
+re.search(r'Cash Reserve Account.*?Ending Balance \([^)]+\) \$([0-9,]+\.\d{2})', text, re.DOTALL)
+```
+But the Betterment PDF Monthly Overview section uses `Ending balance` (lowercase b):
+```
+Ending balance (Aug 31 2026) $188,133.62
+```
+The case mismatch caused zero matches, so no Cash Reserve account was ever created.
+
+**Fix Applied:**
+Added `re.IGNORECASE` flag and lowercased the literal in the pattern to make the match case-insensitive:
+```python
+re.search(r'Cash Reserve Account.*?Ending balance \([^)]+\) \$([0-9,]+\.\d{2})', text, re.DOTALL | re.IGNORECASE)
+```
+
+**Files Changed:**
+- `src/utils/pdf_parser.py` (line ~476, inside `load_portfolio_from_betterment_pdf`)
+
+**Verification:**
+```bash
+python3 -c "
+from src.utils.pdf_parser import load_portfolio_from_betterment_pdf
+portfolio = load_portfolio_from_betterment_pdf('data/Q3 2026/Betterment Q3.pdf', 'Betterment Q3')
+for acc in portfolio.accounts:
+    total = sum(h.current_price * h.shares for h in acc.holdings)
+    print(f'{acc.account_name}: \${total:,.2f}')
+# Expected: Cash Reserve: $188,133.62
+"
+```
+
+**Expected Results:**
+| Account | Value |
+|---------|-------|
+| Taxable Investing | ~$39,241 |
+| Namasya Education | ~$23,264 |
+| Nived Education | ~$15,976 |
+| Cash Reserve | $188,133.62 |
+
+---
+
 ## Defect Template
 
 ```markdown
