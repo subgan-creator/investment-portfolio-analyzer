@@ -473,7 +473,7 @@ def load_portfolio_from_betterment_pdf(pdf_path: str, portfolio_name: str = "Bet
             for page in pdf.pages:
                 text = page.extract_text() or ''
                 # Look for Cash Reserve ending balance (use non-greedy match to get first occurrence)
-                cash_match = re.search(r'Cash Reserve Account.*?Ending Balance \([^)]+\) \$([0-9,]+\.\d{2})', text, re.DOTALL)
+                cash_match = re.search(r'Cash Reserve Account.*?Ending balance \([^)]+\) \$([0-9,]+\.\d{2})', text, re.DOTALL | re.IGNORECASE)
                 if cash_match:
                     cash_value = float(cash_match.group(1).replace(',', ''))
                     if cash_value > 0:
