@@ -5,6 +5,7 @@ Uses SQLAlchemy ORM for database persistence. Currently configured for SQLite,
 but can be migrated to PostgreSQL by changing the connection string.
 """
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, List, Dict, Any
@@ -17,9 +18,40 @@ BASE_DIR = Path(__file__).parent.parent.parent
 DB_PATH = BASE_DIR / 'data' / 'portfolio.db'
 DB_PATH.parent.mkdir(exist_ok=True)
 
-# Create engine and base
-DATABASE_URL = f'sqlite:///{DB_PATH}'
-engine = create_engine(DATABASE_URL, echo=False)
+try:
+    from dotenv import load_dotenv
+    load_dotenv(BASE_DIR / '.env')
+except ImportError:
+    pass
+
+
+def resolve_database_url() -> str:
+    """
+    Where the app stores its data.
+
+    - DATABASE_URL not set  -> local SQLite file at data/portfolio.db (default for local use)
+    - DATABASE_URL=postgres://... or postgresql://...  -> hosted Postgres (e.g. Render Postgres)
+    - DATABASE_URL=sqlite:////var/data/portfolio.db   -> SQLite on a Render persistent disk
+    """
+    url = (os.environ.get('DATABASE_URL') or '').strip()
+    if not url:
+        return f'sqlite:///{DB_PATH}'
+    # Render/Heroku hand out 'postgres://' (rejected by SQLAlchemy 2.x). Pin the driver to
+    # psycopg v3 explicitly, since SQLAlchemy's default Postgres driver differs between versions.
+    for prefix in ('postgres://', 'postgresql://'):
+        if url.startswith(prefix):
+            url = 'postgresql+psycopg://' + url[len(prefix):]
+            break
+    if url.startswith('sqlite:///'):
+        Path(url[len('sqlite:///'):]).parent.mkdir(parents=True, exist_ok=True)
+    return url
+
+
+DATABASE_URL = resolve_database_url()
+_engine_kwargs = {'echo': False}
+if not DATABASE_URL.startswith('sqlite'):
+    _engine_kwargs['pool_pre_ping'] = True  # survive idle connection drops on hosted Postgres
+engine = create_engine(DATABASE_URL, **_engine_kwargs)
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 

@@ -49,6 +49,19 @@ python src/portfolio_analyzer/main.py --input data/your_portfolio.csv
 
 3. **View Results**: Check the generated reports in the `output/` directory.
 
+## Your Profile and Saved Data
+
+- Edit your investment profile anytime at **Profile** (`/profile`). It's one page with every field, and it's used by the AI advisor.
+- This is a single-user app: there's one profile, so it stays the same when you close the browser or use another browser or device.
+- Data (profile, snapshots, chat, fund profiles) is stored in the database set by `DATABASE_URL`:
+  - **Local (default):** leave `DATABASE_URL` unset. Data goes to `data/portfolio.db`.
+  - **Render + Postgres (recommended):** create a Render Postgres database and set the web service's
+    `DATABASE_URL` env var to its *Internal Database URL*. `postgres://` URLs are handled automatically.
+  - **Render + persistent disk:** attach a disk mounted at `/var/data` and set
+    `DATABASE_URL=sqlite:////var/data/portfolio.db`.
+  - Without one of these, Render's filesystem is wiped on every deploy/restart and saved data is lost.
+- Set `SECRET_KEY` in production (see `.env.example`).
+
 ## Data Format
 
 Your portfolio data should include:

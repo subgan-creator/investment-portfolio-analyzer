@@ -46,6 +46,7 @@ data/*.xlsx
 data/*.json
 data/*.pdf
 data/*.db
+data/.secret_key
 !data/sample/
 
 # Uploaded files

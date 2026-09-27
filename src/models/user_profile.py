@@ -142,9 +142,38 @@ class UserProfile(Base):
         return f"<UserProfile(id={self.id}, session_id='{self.session_id}', name='{self.name}')>"
 
 
+# Single-user app: there is exactly one profile, stored under this fixed key, so it no longer
+# depends on a browser cookie (survives closing the browser, other browsers and devices).
+OWNER_PROFILE_KEY = 'owner'
+
+
 def init_user_profile_db():
-    """Create the user_profiles table if it doesn't exist."""
+    """Create the user_profiles table if it doesn't exist and make sure the owner profile is claimed."""
     UserProfile.__table__.create(engine, checkfirst=True)
+    claim_owner_profile()
+
+
+def claim_owner_profile() -> None:
+    """
+    One-time migration from per-browser-session profiles.
+
+    If there is no owner profile yet but older session-keyed profiles exist, adopt the most
+    complete / most recently updated one as the owner profile so earlier answers aren't lost.
+    """
+    db = SessionLocal()
+    try:
+        if db.query(UserProfile).filter(UserProfile.session_id == OWNER_PROFILE_KEY).first():
+            return
+        candidate = (
+            db.query(UserProfile)
+            .order_by(UserProfile.onboarding_completed.desc(), UserProfile.updated_at.desc())
+            .first()
+        )
+        if candidate:
+            candidate.session_id = OWNER_PROFILE_KEY
+            db.commit()
+    finally:
+        db.close()
 
 
 def get_or_create_profile(session_id: str) -> UserProfile:
