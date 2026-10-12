@@ -324,7 +324,10 @@ ANALYSIS SCORES:
                 print(f"[AI Advisor] Empty response. Stop reason: {response.stop_reason}")
                 return "I wasn't able to generate a response. Please try rephrasing your question."
 
-            return response.content[0].text
+            text_blocks = [b for b in response.content if hasattr(b, 'text')]
+            if not text_blocks:
+                return "I wasn't able to generate a response. Please try rephrasing your question."
+            return text_blocks[0].text
 
         except Exception as e:
             error_msg = str(e)
@@ -467,7 +470,10 @@ Give me the recommendations like a financial advisor would in a portfolio review
                 print(f"[AI Advisor] Empty recommendations response. Stop reason: {response.stop_reason}")
                 return "I wasn't able to generate recommendations. Please try again."
 
-            return response.content[0].text
+            text_blocks = [b for b in response.content if hasattr(b, 'text')]
+            if not text_blocks:
+                return "I wasn't able to generate recommendations. Please try again."
+            return text_blocks[0].text
 
         except Exception as e:
             error_msg = str(e)
