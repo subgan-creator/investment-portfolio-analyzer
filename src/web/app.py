@@ -7,10 +7,17 @@ import sys
 import uuid
 import gc
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+# Load .env (SECRET_KEY, DATABASE_URL, ANTHROPIC_API_KEY) before anything reads the environment
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).parent.parent.parent / '.env')
+except ImportError:
+    pass
 
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from werkzeug.utils import secure_filename
@@ -36,8 +43,9 @@ from src.models.fund_profile import (
 from src.models.user_profile import (
     init_user_profile_db, get_or_create_profile, get_profile, update_profile,
     is_onboarding_complete, mark_onboarding_complete, get_profile_for_ai,
-    get_profile_ai_context
+    get_profile_ai_context, OWNER_PROFILE_KEY
 )
+from src.web.profile_options import PROFILE_OPTIONS, parse_profile_form
 from src.services.ai_advisor import AIAdvisor, is_api_configured
 from src.services.fund_matcher import (
     get_look_through_summary, calculate_look_through_allocation,
@@ -52,7 +60,33 @@ from src.utils.sector_classifier import (
 app = Flask(__name__,
             template_folder='templates',
             static_folder='static')
-app.secret_key = 'portfolio-analyzer-secret-key-change-in-production'
+
+
+def _load_secret_key() -> str:
+    """SECRET_KEY from the environment; otherwise a random key kept in data/.secret_key."""
+    key = os.environ.get('SECRET_KEY')
+    if key:
+        return key
+    key_file = Path(__file__).parent.parent.parent / 'data' / '.secret_key'
+    try:
+        if key_file.exists():
+            return key_file.read_text().strip()
+        key_file.parent.mkdir(exist_ok=True)
+        key = uuid.uuid4().hex + uuid.uuid4().hex
+        key_file.write_text(key)
+        return key
+    except OSError:
+        return uuid.uuid4().hex + uuid.uuid4().hex
+
+
+app.secret_key = _load_secret_key()
+# Keep the browser session (chat thread etc.) for a year instead of ending when the browser closes
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=365)
+
+
+@app.before_request
+def _make_session_permanent():
+    session.permanent = True
 
 # Configure upload folder
 UPLOAD_FOLDER = Path(__file__).parent.parent.parent / 'uploads'
@@ -291,10 +325,11 @@ def allowed_file(filename):
 
 
 def get_or_create_session_id():
-    """Get or create a session ID for the current user."""
-    if 'user_session_id' not in session:
-        session['user_session_id'] = str(uuid.uuid4())[:16]
-    return session['user_session_id']
+    """
+    Key of the profile to use. This is a single-user app, so every browser/device uses the
+    one owner profile instead of a per-browser random ID (which was lost when the browser closed).
+    """
+    return OWNER_PROFILE_KEY
 
 
 @app.route('/')
@@ -1048,6 +1083,30 @@ def api_profile():
         'exists': True,
         'profile': profile.to_dict()
     })
+
+
+@app.route('/profile', methods=['GET', 'POST'])
+def profile_page():
+    """View and edit the whole investment profile on one page."""
+    session_id = get_or_create_session_id()
+    get_or_create_profile(session_id)
+
+    if request.method == 'POST':
+        update_data, errors = parse_profile_form(request.form)
+        if errors:
+            for error in errors:
+                flash(error, 'error')
+        else:
+            update_data['onboarding_completed'] = True
+            update_profile(session_id, **update_data)
+            flash('Profile saved.', 'success')
+            return redirect(url_for('profile_page'))
+
+    profile = get_profile(session_id)
+    return render_template('profile.html',
+                           profile=profile.to_dict(),
+                           options=PROFILE_OPTIONS,
+                           current_year=datetime.now().year)
 
 
 # ==================== HISTORY & SNAPSHOT ROUTES ====================

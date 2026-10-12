@@ -1,6 +1,6 @@
 # Product Roadmap - Investment Portfolio Analyzer
 
-> **Last Updated:** March 29, 2026
+> **Last Updated:** September 27, 2026
 >
 > This document tracks feature ideas, planned enhancements, and the product vision.
 
@@ -876,6 +876,17 @@ USER_PROFILE = {
 
 ### Medium Priority
 
+#### Direct Brokerage Account Sync (Plaid) — REQ-001
+**Why:** Stop downloading/uploading statements; pull holdings directly from Betterment and other platforms
+**Effort:** Medium–High
+**Status:** Backlog — not scheduled
+**Spec:** [`docs/requirements/REQ-001-direct-brokerage-sync.md`](docs/requirements/REQ-001-direct-brokerage-sync.md)
+**Details:**
+- Betterment has no public API for individuals → use Plaid Investments (read-only, supports Betterment)
+- Plaid becomes another source producing Portfolio/Account/Holding; statement upload stays as fallback
+- Gap: no tax lots/purchase dates from Plaid → make `Holding.purchase_date` optional
+- Depends on persistent user identity + persistent DB (tokens must belong to a user)
+
 #### 4. Rebalancing Recommendations
 **Why:** Tell users exactly what to buy/sell to reach target allocation
 **Effort:** Medium
@@ -1021,7 +1032,7 @@ Items that need cleanup but aren't features:
 
 *Random ideas that need more thought:*
 
-- Integration with Plaid for automatic account sync?
+- ~~Integration with Plaid for automatic account sync?~~ → moved to backlog as REQ-001
 - Support for crypto portfolios (Coinbase, etc.)?
 - ESG scoring for socially responsible investing?
 - What-if scenarios ("What if I sold X and bought Y?")

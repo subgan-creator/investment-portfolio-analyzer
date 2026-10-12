@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Profile</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .profile-form { display: flex; flex-direction: column; gap: 1.25rem; }
+        .profile-form .card h2 { font-size: 1.05rem; margin: 0 0 .25rem; }
+        .profile-form .section-desc { color: var(--muted-foreground); font-size: .875rem; margin: 0 0 1rem; }
+        .field-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+        .field { display: flex; flex-direction: column; gap: .375rem; }
+        .field label, .field .field-label { font-size: .875rem; font-weight: 500; }
+        .field input[type=text], .field input[type=number], .field select {
+            padding: .55rem .7rem; border: 1px solid var(--input); border-radius: 8px;
+            font: inherit; background: var(--card); color: var(--foreground);
+        }
+        .field input:focus, .field select:focus { outline: 2px solid var(--ring); outline-offset: 1px; }
+        .chip-group { display: flex; flex-wrap: wrap; gap: .5rem; }
+        .chip { position: relative; }
+        .chip input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+        .chip span {
+            display: inline-block; padding: .4rem .8rem; border: 1px solid var(--border);
+            border-radius: 999px; font-size: .875rem; background: var(--card); cursor: pointer;
+        }
+        .chip input:checked + span { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); }
+        .chip input:focus-visible + span { outline: 2px solid var(--ring); outline-offset: 2px; }
+        .risk-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .75rem; }
+        .risk-option { position: relative; border: 1px solid var(--border); border-radius: 10px; padding: .8rem 1rem; cursor: pointer; background: var(--card); }
+        .risk-option input { position: absolute; opacity: 0; }
+        .risk-option strong { display: block; font-size: .95rem; }
+        .risk-option small { color: var(--muted-foreground); }
+        .risk-option:has(input:checked) { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
+        .profile-actions { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+        .profile-meta { color: var(--muted-foreground); font-size: .8rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <h1>Your Investment Profile</h1>
+                <div class="header-buttons">
+                    <a href="{{ url_for('history') }}" class="btn btn-secondary">History</a>
+                    <a href="{{ url_for('index') }}" class="btn btn-primary">New Analysis</a>
+                </div>
+            </div>
+        </header>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endwith %}
+
+        <main>
+            <form method="post" action="{{ url_for('profile_page') }}" class="profile-form">
+                <section class="card">
+                    <h2>About you</h2>
+                    <p class="section-desc">Used to personalize the AI advisor's recommendations.</p>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="name">Name</label>
+                            <input type="text" id="name" name="name" maxlength="100" value="{{ profile.name or '' }}">
+                        </div>
+                        <div class="field">
+                            <label for="age">Age</label>
+                            <input type="number" id="age" name="age" min="18" max="100" value="{{ profile.age or '' }}">
+                        </div>
+                        <div class="field">
+                            <label for="target_retirement_year">Target retirement year</label>
+                            <input type="number" id="target_retirement_year" name="target_retirement_year"
+                                   min="{{ current_year }}" max="{{ current_year + 60 }}" value="{{ profile.target_retirement_year or '' }}">
+                        </div>
+                    </div>
+                </section>
+
+                <section class="card">
+                    <h2>Accounts</h2>
+                    <p class="section-desc">What you hold and where.</p>
+                    <div class="field">
+                        <span class="field-label">Account types</span>
+                        <div class="chip-group">
+                            {% for value, label in options.account_types %}
+                            <label class="chip"><input type="checkbox" name="account_types" value="{{ value }}" {% if value in profile.account_types %}checked{% endif %}><span>{{ label }}</span></label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="field" style="margin-top: 1rem;">
+                        <span class="field-label">Brokerages</span>
+                        <div class="chip-group">
+                            {% for value, label in options.brokerages %}
+                            <label class="chip"><input type="checkbox" name="brokerages" value="{{ value }}" {% if value in profile.brokerages %}checked{% endif %}><span>{{ label }}</span></label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="field-grid" style="margin-top: 1rem;">
+                        <div class="field">
+                            <label for="portfolio_size_range">Total portfolio size</label>
+                            <select id="portfolio_size_range" name="portfolio_size_range">
+                                <option value="">Not set</option>
+                                {% for value, label in options.portfolio_sizes %}
+                                <option value="{{ value }}" {% if profile.portfolio_size_range == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="card">
+                    <h2>Goals and risk</h2>
+                    <p class="section-desc">How you want the portfolio to behave.</p>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="primary_goal">Primary goal</label>
+                            <select id="primary_goal" name="primary_goal">
+                                <option value="">Not set</option>
+                                {% for value, label in options.goals %}
+                                <option value="{{ value }}" {% if profile.primary_goal == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="time_horizon">Time horizon</label>
+                            <select id="time_horizon" name="time_horizon">
+                                <option value="">Not set</option>
+                                {% for value, label in options.time_horizons %}
+                                <option value="{{ value }}" {% if profile.time_horizon == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="field" style="margin-top: 1rem;">
+                        <span class="field-label">Risk tolerance</span>
+                        <div class="risk-options">
+                            {% for value, label, desc in options.risk_levels %}
+                            <label class="risk-option">
+                                <input type="radio" name="risk_tolerance" value="{{ value }}" {% if profile.risk_tolerance == value %}checked{% endif %}>
+                                <strong>{{ label }}</strong>
+                                <small>{{ desc }}</small>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </section>
+
+                <section class="card">
+                    <h2>Taxes</h2>
+                    <p class="section-desc">Optional. Enables tax-aware suggestions.</p>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="filing_status">Filing status</label>
+                            <select id="filing_status" name="filing_status">
+                                <option value="">Prefer not to say</option>
+                                {% for value, label in options.filing_statuses %}
+                                <option value="{{ value }}" {% if profile.filing_status == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="state">State</label>
+                            <select id="state" name="state">
+                                <option value="">Prefer not to say</option>
+                                {% for code, name in options.states %}
+                                <option value="{{ code }}" {% if profile.state == code %}selected{% endif %}>{{ name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="profile-actions">
+                    <span class="profile-meta">
+                        {% if profile.updated_at %}Last saved {{ profile.updated_at[:16].replace('T', ' ') }} UTC{% endif %}
+                    </span>
+                    <button type="submit" class="btn btn-primary">Save profile</button>
+                </div>
+            </form>
+        </main>
+    </div>
+</body>
+</html>
