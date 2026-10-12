@@ -316,7 +316,7 @@ ANALYSIS SCORES:
                 model=self.model,
                 system=self.build_system_prompt(),
                 messages=valid_messages,
-                max_tokens=1024,
+                max_tokens=4096,
             )
 
             # Handle empty response
@@ -462,7 +462,7 @@ Give me the recommendations like a financial advisor would in a portfolio review
                 model=self.model,
                 system=self.build_recommendations_system_prompt(),
                 messages=[{"role": "user", "content": user_message}],
-                max_tokens=1500,
+                max_tokens=6000,
             )
 
             # Handle empty response
