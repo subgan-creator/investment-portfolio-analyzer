@@ -237,6 +237,29 @@ def calculate_comparison(snapshot1: Snapshot, snapshot2: Snapshot) -> Dict[str, 
     value_change = snapshot2.total_value - snapshot1.total_value
     value_change_percent = (value_change / snapshot1.total_value * 100) if snapshot1.total_value > 0 else 0
 
+    # Build per-account comparison by matching account names
+    accounts1 = {a['name']: a for a in (json.loads(snapshot1.accounts_json) if snapshot1.accounts_json else [])}
+    accounts2 = {a['name']: a for a in (json.loads(snapshot2.accounts_json) if snapshot2.accounts_json else [])}
+    all_names = sorted(set(accounts1) | set(accounts2))
+
+    account_comparison = []
+    for name in all_names:
+        a1 = accounts1.get(name)
+        a2 = accounts2.get(name)
+        v1 = a1['value'] if a1 else 0
+        v2 = a2['value'] if a2 else 0
+        change = v2 - v1
+        change_pct = (change / v1 * 100) if v1 > 0 else None
+        account_comparison.append({
+            'name': name,
+            'value1': v1,
+            'value2': v2,
+            'change': change,
+            'change_pct': change_pct,
+            'is_new': a1 is None,
+            'is_removed': a2 is None,
+        })
+
     return {
         'value_change': value_change,
         'value_change_percent': value_change_percent,
@@ -244,4 +267,5 @@ def calculate_comparison(snapshot1: Snapshot, snapshot2: Snapshot) -> Dict[str, 
         'diversification_change': (snapshot2.diversification_score or 0) - (snapshot1.diversification_score or 0),
         'holdings_change': snapshot2.num_holdings - snapshot1.num_holdings,
         'accounts_change': snapshot2.num_accounts - snapshot1.num_accounts,
+        'account_comparison': account_comparison,
     }
