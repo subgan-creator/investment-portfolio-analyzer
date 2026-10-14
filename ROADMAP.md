@@ -1006,6 +1006,31 @@ USER_PROFILE = {
 
 ---
 
+## Infrastructure
+
+### Persistent Database (PostgreSQL on Render)
+**Why:** Render's filesystem is ephemeral — every deploy wipes the SQLite database, causing users to lose all saved snapshots and history.
+**Effort:** Low (30 minutes — no code changes needed)
+**Status:** Planned
+
+**The Problem:**
+- Snapshots are saved to `data/portfolio.db` (SQLite file on disk)
+- Render resets the filesystem on every deploy
+- All saved snapshots, history, and comparisons are lost after each deploy
+
+**Solution:**
+Provision a free Render PostgreSQL instance and set the `DATABASE_URL` environment variable. The app already supports this via `resolve_database_url()` in `src/models/snapshot.py`.
+
+**Steps:**
+1. Render dashboard → New → PostgreSQL → create free instance
+2. Copy the Internal Database URL
+3. Web service → Environment → add `DATABASE_URL = <internal url>`
+4. Redeploy — snapshots persist forever
+
+**No code changes required.** SQLAlchemy switches from SQLite to Postgres automatically when `DATABASE_URL` is set.
+
+---
+
 ## Technical Debt
 
 Items that need cleanup but aren't features:
