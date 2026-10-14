@@ -87,6 +87,38 @@
                 </div>
             </section>
 
+            <!-- Account Breakdown -->
+            {% if comparison.account_comparison %}
+            <section class="card">
+                <h2>Account Breakdown</h2>
+                <div class="metrics-table">
+                    <div class="metric-row header">
+                        <span>Account</span>
+                        <span>{{ snapshot1.name[:20] }}{% if snapshot1.name|length > 20 %}...{% endif %}</span>
+                        <span>{{ snapshot2.name[:20] }}{% if snapshot2.name|length > 20 %}...{% endif %}</span>
+                        <span>Change</span>
+                    </div>
+                    {% for acc in comparison.account_comparison %}
+                    <div class="metric-row {% if acc.is_new %}account-new{% elif acc.is_removed %}account-removed{% endif %}">
+                        <span class="account-name">
+                            {{ acc.name }}
+                            {% if acc.is_new %}<span class="badge badge-new">New</span>{% endif %}
+                            {% if acc.is_removed %}<span class="badge badge-removed">Removed</span>{% endif %}
+                        </span>
+                        <span>{% if acc.value1 > 0 %}${{ "{:,.0f}".format(acc.value1) }}{% else %}—{% endif %}</span>
+                        <span>{% if acc.value2 > 0 %}${{ "{:,.0f}".format(acc.value2) }}{% else %}—{% endif %}</span>
+                        <span class="{{ 'positive' if acc.change >= 0 else 'negative' }}">
+                            {{ "${:+,.0f}".format(acc.change) }}
+                            {% if acc.change_pct is not none %}
+                            <span class="change-pct-small">({{ "{:+.1f}".format(acc.change_pct) }}%)</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+
             <!-- Side by Side Holdings -->
             <section class="card">
                 <h2>Top Holdings Comparison</h2>
@@ -268,6 +300,34 @@
         .no-data {
             color: #94a3b8;
             font-style: italic;
+        }
+
+        .account-name {
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            font-size: 0.7rem;
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-new { background: #dcfce7; color: #15803d; }
+        .badge-removed { background: #fee2e2; color: #b91c1c; }
+
+        .account-new { opacity: 0.85; }
+        .account-removed { opacity: 0.85; }
+
+        .change-pct-small {
+            font-size: 0.8rem;
+            color: inherit;
+            opacity: 0.8;
         }
 
         @media (max-width: 768px) {
